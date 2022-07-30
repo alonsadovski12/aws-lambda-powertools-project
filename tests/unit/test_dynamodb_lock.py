@@ -9,7 +9,7 @@ from botocore.client import ClientError
 import unittest
 from unittest import mock
 
-from aws_lambda_powertools.utilities.dynamodb_lock import DynamoDBLockClient, BaseDynamoDBLock, DynamoDBLockError
+from aws_lambda_powertools.utilities.dynamodb_lock import DynamoDBLockClient, DynamoDBLockError
 
 
 class TestDynamoDBLockClient(unittest.TestCase):
@@ -21,6 +21,9 @@ class TestDynamoDBLockClient(unittest.TestCase):
         self.ddb_resource = mock.MagicMock(name='ddb_resource')
         self.lock_client = DynamoDBLockClient(
             self.ddb_resource,
+            table_name='DynamoDBLockTable',
+            partition_key_name='lock_key',
+            sort_key_name='sort_key',
             owner_name=uuid4(),
             heartbeat_period=datetime.timedelta(milliseconds=100),
             safe_period=datetime.timedelta(milliseconds=600),
@@ -42,7 +45,8 @@ class TestDynamoDBLockClient(unittest.TestCase):
     # __init__ tests
 
     def test_minimal_args_client(self):
-        minimal_args_client = DynamoDBLockClient(self.ddb_table, owner_name=uuid4())
+        minimal_args_client = DynamoDBLockClient(self.ddb_table, table_name='DynamoDBLockTable', partition_key_name='lock_key',
+                                                 sort_key_name='sort_key', owner_name=uuid4())
         self.assertIsNotNone(minimal_args_client)
 
     # send_heartbeat tests
@@ -219,17 +223,6 @@ class TestDynamoDBLockClient(unittest.TestCase):
         except DynamoDBLockError as e:
             self.assertEqual(e.code, DynamoDBLockError.UNKNOWN)
 
-    def test_acquire_lock_other_error(self):
-        # test the get-none, put-error
-        self.ddb_table.get_item = mock.MagicMock('get_item')
-        self.ddb_table.put_item = mock.MagicMock('put_item')
-        self.ddb_table.get_item.side_effect = lambda **kwargs: {}
-        self.ddb_table.put_item.side_effect = RuntimeError('TestError')
-        try:
-            self.lock_client.acquire_lock('key', retry_period=datetime.timedelta(milliseconds=100))
-            self.fail('Expected an error')
-        except DynamoDBLockError as e:
-            self.assertEqual(e.code, DynamoDBLockError.UNKNOWN)
 
     # release_lock tests
 
@@ -239,15 +232,6 @@ class TestDynamoDBLockClient(unittest.TestCase):
         self.lock_client.release_lock(lock)
         self.assertTrue(lock.unique_identifier not in self.lock_client._locks)
         self.ddb_table.delete_item.assert_called_once()
-
-    def test_release_lock_not_owned(self):
-        other_lock_client = DynamoDBLockClient(self.ddb_table, owner_name=uuid4())
-        other_lock = other_lock_client.acquire_lock('key')
-        try:
-            self.lock_client.release_lock(other_lock, best_effort=False)
-            self.fail('Expected an error')
-        except DynamoDBLockError as e:
-            self.assertEqual(e.code, DynamoDBLockError.LOCK_NOT_OWNED)
 
     def test_release_lock_after_stolen(self):
         self.ddb_table.delete_item = mock.MagicMock('delete_item')
@@ -279,21 +263,11 @@ class TestDynamoDBLockClient(unittest.TestCase):
             self.assertEqual(e.code, DynamoDBLockError.UNKNOWN)
             self.assertTrue(lock.unique_identifier not in self.lock_client._locks)
 
-    def test_release_lock_other_error(self):
-        self.ddb_table.delete_item = mock.MagicMock('delete_item')
-        self.ddb_table.delete_item.side_effect = RuntimeError('TestError')
-        lock = self.lock_client.acquire_lock('key')
-        try:
-            self.lock_client.release_lock(lock, best_effort=False)
-            self.fail('Expected an error')
-        except DynamoDBLockError as e:
-            self.assertEqual(e.code, DynamoDBLockError.UNKNOWN)
-            self.assertTrue(lock.unique_identifier not in self.lock_client._locks)
-
     # release_lock tests - with best_effort=True
 
     def test_best_effort_release_lock_not_owned(self):
-        other_lock_client = DynamoDBLockClient(self.ddb_table, owner_name=uuid4())
+        other_lock_client = DynamoDBLockClient(self.ddb_table, table_name='DynamoDBLockTable', partition_key_name='lock_key',
+                                               sort_key_name='sort_key', owner_name=uuid4())
         other_lock = other_lock_client.acquire_lock('key')
         self.lock_client.release_lock(other_lock)
 
@@ -319,25 +293,7 @@ class TestDynamoDBLockClient(unittest.TestCase):
         self.lock_client.release_lock(lock)
         self.assertTrue(lock.unique_identifier not in self.lock_client._locks)
 
-    def test_best_effort_release_lock_other_error(self):
-        self.ddb_table.delete_item = mock.MagicMock('delete_item')
-        self.ddb_table.delete_item.side_effect = RuntimeError('TestError')
-        lock = self.lock_client.acquire_lock('key')
-        self.lock_client.release_lock(lock)
-        self.assertTrue(lock.unique_identifier not in self.lock_client._locks)
-
     # lock-to-item serialize/deserialize tests
-
-    def test_lock_to_item(self):
-        lock = BaseDynamoDBLock('p', 's', 'o', 5, 'r', 10, {'k': 'v'})
-        item = self.lock_client._get_record_from_lock(lock) or {}
-        self.assertEqual(item[self.lock_client._partition_key_name], 'p')
-        self.assertEqual(item[self.lock_client._sort_key_name], 's')
-        self.assertEqual(item['owner_name'], 'o')
-        self.assertEqual(item['lease_duration'], 5)
-        self.assertEqual(item['record_version_number'], 'r')
-        self.assertEqual(item['expiry_time'], 10)
-        self.assertEqual(item['k'], 'v')
 
     def test_item_to_lock(self):
         item = {
