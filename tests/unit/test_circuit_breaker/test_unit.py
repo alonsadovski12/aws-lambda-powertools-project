@@ -26,7 +26,7 @@ def test_circuitbreaker_error__str__():
     error = CircuitBreakerException(cb)
 
     assert str(error).startswith('Circuit Foobar OPEN until ')
-    assert str(error).endswith('(0 failures, 30 sec remaining) (last_failure: Exception())')
+    assert str(error).endswith('(last_failure: Exception())')
 
 
 def test_circuitbreaker_should_save_last_exception_on_failure_call():
@@ -105,7 +105,7 @@ def test_circuit_decorator_without_args(circuitbreaker_mock):
     def function():
         return True
 
-    circuit(function)
+    circuit('name', function)
     circuitbreaker_mock.assert_called_once_with(function)
 
 
@@ -113,31 +113,31 @@ def test_circuit_decorator_with_args():
     def function_fallback():
         return True
 
-    breaker = circuit(10, 20, [KeyError], 'foobar', function_fallback)
+    breaker = circuit('foobar', 10, 20, [KeyError], function_fallback)
 
     assert breaker.is_expected_failure(KeyError)
     assert not breaker.is_expected_failure(Exception)
     assert not breaker.is_expected_failure(FooError)
     assert breaker._failure_threshold == 10
-    assert breaker._recovery_timeout_in_milli == 200000
+    assert breaker._recovery_timeout_in_milli == 20000
     assert breaker._name == "foobar"
     assert breaker._fallback_function == function_fallback
 
 
 def test_breaker_default_constructor_traps_Exception():
-    breaker = circuit()
+    breaker = circuit('foobar')
     assert breaker.is_expected_failure(Exception)
     assert breaker.is_expected_failure(FooError)
 
 
 def test_breaker_expected_exception_is_custom_exception():
-    breaker = circuit(expected_exception=[FooError])
+    breaker = circuit('foobar', expected_exception=[FooError])
     assert breaker.is_expected_failure(FooError)
     assert not breaker.is_expected_failure(Exception)
 
 
 def test_breaker_constructor_expected_exception_is_exception_list():
-    breaker = circuit(expected_exception=[FooError, BarError])
+    breaker = circuit('foobar', expected_exception=[FooError, BarError])
     assert breaker.is_expected_failure(FooError)
     assert breaker.is_expected_failure(BarError)
     assert not breaker.is_expected_failure(Exception)

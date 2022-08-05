@@ -112,7 +112,7 @@ def circuit(name,
     # if the decorator is used without parameters, the
     # wrapped function is provided as first argument
     if callable(failure_threshold):
-        return cls().decorate(failure_threshold)
+        return cls(name=name).decorate(failure_threshold)
     else:
         return cls(
             failure_threshold=failure_threshold,
