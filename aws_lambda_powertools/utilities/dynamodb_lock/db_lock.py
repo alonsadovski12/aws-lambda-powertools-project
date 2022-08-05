@@ -114,7 +114,6 @@ class DynamoDBLock(BaseDynamoDBLock):
         """
         self.logger.debug('exiting lock', unique_identifier=self.unique_identifier)
         self.release(best_effort=True)
-        return True
 
     def release(self, best_effort=True):
         """

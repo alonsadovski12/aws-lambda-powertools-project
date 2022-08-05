@@ -1,7 +1,7 @@
 # pylint: disable= print-used, protected-access, invalid-name, deprecated-method, unused-variable
 
 import datetime
-import os
+import pytest
 import time
 from uuid import uuid4
 
@@ -342,3 +342,19 @@ class TestDynamoDBLockClient(unittest.TestCase):
             self.ddb_table.put_item.assert_called()
             print(f'Lock: {str(lock)}')
         self.ddb_table.delete_item.assert_called()
+
+
+    def _raising_logic(self):
+        raise ValueError('OH NO')
+
+
+    def test_acquire_lock_with_exception(self):
+        with pytest.raises(ValueError):
+            try:
+                with self.lock_client.acquire_lock(partition_key='123456789012', sort_key='database_name'):
+                    self._raising_logic()
+            except ValueError as ex:
+                print(f'caught ValueError {ex}')
+                raise ex
+            finally:
+                self.lock_client.close()

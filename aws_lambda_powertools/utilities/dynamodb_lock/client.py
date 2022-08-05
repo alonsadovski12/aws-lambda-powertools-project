@@ -331,7 +331,7 @@ class DynamoDBLockClient:
         new_lock = DynamoDBLock(partition_key=partition_key, sort_key=sort_key, owner_name=self._owner_name,
                                 lease_duration=self._lease_duration.total_seconds(), record_version_number=str(uuid.uuid4()),
                                 expiry_time=int(time.time() + self._expiry_period.total_seconds()),
-                                additional_attributes=additional_attributes, app_callback=app_callback, lock_client=self)
+                                additional_attributes=additional_attributes, app_callback=app_callback, lock_client=self, logger=self.logger)
 
         start_time = time.monotonic()
         retry_timeout_time = start_time + retry_timeout.total_seconds()
@@ -552,7 +552,7 @@ class DynamoDBLockClient:
             partition_key=item.pop(self._partition_key_name), sort_key=item.pop(self._sort_key_name),
             owner_name=item.pop(self._COL_OWNER_NAME), lease_duration=float(item.pop(self._COL_LEASE_DURATION)),
             record_version_number=item.pop(self._COL_RECORD_VERSION_NUMBER), expiry_time=int(item.pop(self._ttl_attribute_name)),
-            additional_attributes=item)
+            additional_attributes=item, logger=self.logger)
         return lock
 
     def _get_item_from_lock(self, lock):
@@ -618,8 +618,8 @@ class DynamoDBLockClient:
         return '%s::%s' % (self.__class__.__name__, self.__dict__)
 
     @classmethod
-    def create_dynamodb_table(cls, dynamodb_client, table_name=_DEFAULT_TABLE_NAME, partition_key_name=DEFAULT_PARTITION_KEY_NAME,
-                              sort_key_name=DEFAULT_SORT_KEY_NAME, ttl_attribute_name=DEFAULT_TTL_ATTRIBUTE_NAME,
+    def create_dynamodb_table(cls, dynamodb_client, table_name, partition_key_name,
+                              sort_key_name, ttl_attribute_name=DEFAULT_TTL_ATTRIBUTE_NAME,
                               read_capacity=_DEFAULT_READ_CAPACITY, write_capacity=_DEFAULT_WRITE_CAPACITY):
         """
         Helper method to create the DynamoDB table
@@ -632,8 +632,6 @@ class DynamoDBLockClient:
         :param int read_capacity: the max TPS for strongly-consistent reads; defaults to 5
         :param int write_capacity: the max TPS for write operations; defaults to 5
         """
-        logger = get_logger()
-        logger.info('creating the lock table', table_name=table_name)
         dynamodb_client.create_table(
             TableName=table_name,
             KeySchema=[
@@ -663,7 +661,6 @@ class DynamoDBLockClient:
         )
         cls._wait_for_table_to_be_active(dynamodb_client, table_name)
 
-        logger.info('updating the table with time_to_live configuration')
         dynamodb_client.update_time_to_live(TableName=table_name, TimeToLiveSpecification={
             'Enabled': True,
             'AttributeName': ttl_attribute_name
@@ -672,12 +669,9 @@ class DynamoDBLockClient:
 
     @classmethod
     def _wait_for_table_to_be_active(cls, dynamodb_client, table_name):
-        logger = get_logger()
-        logger.info('waiting till the table becomes ACTIVE')
         while True:
             response = dynamodb_client.describe_table(TableName=table_name)
             status = response.get('Table', {}).get('TableStatus', 'UNKNOWN')
-            logger.info('table status', status=status)
             if status == 'ACTIVE':
                 break
             else:
