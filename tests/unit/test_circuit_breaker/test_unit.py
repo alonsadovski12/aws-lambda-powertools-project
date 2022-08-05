@@ -141,3 +141,21 @@ def test_breaker_constructor_expected_exception_is_exception_list():
     assert breaker.is_expected_failure(FooError)
     assert breaker.is_expected_failure(BarError)
     assert not breaker.is_expected_failure(Exception)
+
+
+def test_retry():
+    def retry_method():
+        assert BarError
+    fallback = Mock(return_value=True)
+
+    cb = circuit(name='with_fallback', fallback_function=fallback)
+
+    # mock opened prop to see if fallback is called with correct parameters.
+    # cb.opened = lambda self: True
+    func_decorated = cb.retry_until_close(retry_method)
+
+    func_decorated('test3', test='test')
+
+    # check args and kwargs are getting correctly to fallback function
+    assert cb._threshold_occurred()
+    fallback.assert_called_once_with('test3', test='test')

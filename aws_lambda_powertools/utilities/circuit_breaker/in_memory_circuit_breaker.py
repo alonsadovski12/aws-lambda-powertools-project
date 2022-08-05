@@ -97,12 +97,12 @@ class InMemoryCircuitBreaker(BaseCircuitBreaker):
         """
         self.logger.info("The requested call failed")
         self._failure_count += 1
-        if self._failure_count >= self._failure_threshold:
+        if self._threshold_occurred():
             self.logger.warning(f'Failure count is above the threshold {self._failure_threshold}. moving state to open')
             self._state = State.OPEN
             self._opened = self.current_milli_time()
 
-
+    
 def circuit(name,
             failure_threshold=None,
             recovery_timeout=None,
