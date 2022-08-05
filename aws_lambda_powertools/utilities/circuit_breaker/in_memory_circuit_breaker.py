@@ -19,7 +19,7 @@ class InMemoryCircuitBreaker(BaseCircuitBreaker):
                  fallback_function=None,
                  monitor=CircuitBreakerMonitor,
                  logger=logger):
-        super().__init__(failure_threshold, recovery_timeout, expected_exception, name, fallback_function, monitor)
+        super().__init__(name, failure_threshold, recovery_timeout, expected_exception, fallback_function, monitor)
         self.logger = logger
 
     @property

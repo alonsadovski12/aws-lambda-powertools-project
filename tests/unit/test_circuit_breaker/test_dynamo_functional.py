@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 from pytest import raises
 
 from aws_lambda_powertools.utilities.circuit_breaker.base.base_circuit_breaker import CircuitBreakerException, State
-from aws_lambda_powertools.utilities.circuit_breaker.in_memory_circuit_breaker import InMemoryCircuitBreaker
+from aws_lambda_powertools.utilities.circuit_breaker.dynamodb_circuit_breaker import DynamoDBCircuitBreaker
 from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_monitor import CircuitBreakerMonitor
 
 TABLE_NAME = 'AlonsadovskiHelloDemocircuit-ServiceCircuitBreaker01F9D601-1K8M53UDO7S6D'
@@ -17,30 +17,29 @@ def pseudo_remote_call():
     return True
 
 
-@InMemoryCircuitBreaker(name='circuit_success')
+#@DynamoDBCircuitBreaker(name='circuit_success', table_name=TABLE_NAME)
 def circuit_success():
     return pseudo_remote_call()
 
 
-@InMemoryCircuitBreaker(failure_threshold=1, name="circuit_failure")
+#@DynamoDBCircuitBreaker(failure_threshold=1, name="circuit_failure", table_name=TABLE_NAME)
 def circuit_failure():
     raise IOError()
 
 
-@InMemoryCircuitBreaker(failure_threshold=1, name="circuit_generator_failure")
+#@DynamoDBCircuitBreaker(failure_threshold=1, name="circuit_generator_failure", table_name=TABLE_NAME)
 def circuit_generator_failure():
     pseudo_remote_call()
     yield 1
     raise IOError()
 
 
-@InMemoryCircuitBreaker(failure_threshold=1, name="threshold_1")
+#@DynamoDBCircuitBreaker(failure_threshold=1, name="threshold_1", table_name=TABLE_NAME)
 def circuit_threshold_1():
-    pseudo_remote_call()
     raise IOError('Connection refused')
 
 
-@InMemoryCircuitBreaker(failure_threshold=2, recovery_timeout=3, name="threshold_2")
+@DynamoDBCircuitBreaker(failure_threshold=2, recovery_timeout=3, name="threshold_2", table_name=TABLE_NAME)
 def circuit_threshold_2_timeout_1():
     global RAISE_EXCEPTION
     if RAISE_EXCEPTION:
@@ -48,7 +47,7 @@ def circuit_threshold_2_timeout_1():
     return True
 
 
-@InMemoryCircuitBreaker(failure_threshold=3, recovery_timeout=1, name="threshold_3")
+#@DynamoDBCircuitBreaker(failure_threshold=3, recovery_timeout=1, name="threshold_3", table_name=TABLE_NAME)
 def circuit_threshold_3_timeout_1():
     global NUM
     NUM = NUM + 1
@@ -102,7 +101,7 @@ def test_circuitbreaker_recover_half_open(mock_remote):
 
     # initial state: closed
     assert circuitbreaker.closed
-    assert circuitbreaker.state == State.CLOSED
+    assert circuitbreaker.state == State.CLOSED.value
 
     # no exception -> success
     assert circuit_threshold_3_timeout_1()
@@ -126,7 +125,7 @@ def test_circuitbreaker_recover_half_open(mock_remote):
 
     # Circuit breaker opens, threshold has been reached
     assert circuitbreaker.opened
-    assert circuitbreaker.state == State.OPEN
+    assert circuitbreaker.state == State.OPEN.value
     assert circuitbreaker.failure_count == 3
     assert circuitbreaker.open_remaining <= 1000
 
@@ -175,7 +174,7 @@ def test_circuitbreaker_reopens_after_successful_calls(mock_remote):
 
     # initial state: closed
     assert circuitbreaker.closed
-    assert circuitbreaker.state == State.CLOSED
+    assert circuitbreaker.state == State.CLOSED.value
     assert circuitbreaker.failure_count == 0
 
     # successful call -> no exception
@@ -196,7 +195,7 @@ def test_circuitbreaker_reopens_after_successful_calls(mock_remote):
 
     # Circuit breaker opens, threshold has been reached
     assert circuitbreaker.opened
-    assert circuitbreaker.state == State.OPEN
+    assert circuitbreaker.state == State.OPEN.value
     assert circuitbreaker.failure_count == 2
     assert circuitbreaker.open_remaining <= 3000
 
@@ -225,14 +224,14 @@ def test_circuitbreaker_reopens_after_successful_calls(mock_remote):
     assert not circuitbreaker.closed
     assert circuitbreaker.failure_count == 2
     assert circuitbreaker.open_remaining < 0
-    assert circuitbreaker.state == State.HALF_OPEN
+    assert circuitbreaker.state == State.HALF_OPEN.value
 
     # successful call
     assert circuit_threshold_2_timeout_1()
 
     # circuit closed and reset'ed
     assert circuitbreaker.closed
-    assert circuitbreaker.state == State.CLOSED
+    assert circuitbreaker.state == State.CLOSED.value
     assert circuitbreaker.failure_count == 0
 
 
