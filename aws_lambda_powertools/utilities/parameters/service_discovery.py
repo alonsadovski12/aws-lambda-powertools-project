@@ -21,14 +21,11 @@ CLIENT_ID = str(uuid4())
 
 class ServiceDiscoveryProvider(BaseProvider):
     """
-    AWS App Config Provider
+    AWS Service Discovery Provider
 
     Parameters
     ----------
-    environment: str
-        Environment of the configuration to pass during client initialization
-    application: str, optional
-        Application of the configuration to pass during client initialization
+
     config: botocore.config.Config, optional
         Botocore configuration to pass during client initialization
     boto3_session : boto3.session.Session, optional
@@ -36,30 +33,63 @@ class ServiceDiscoveryProvider(BaseProvider):
 
     Example
     -------
-    **Retrieves the latest configuration value from App Config**
+    **Retrieves a parameter value from AWS Service Discovery**
 
-        >>> from aws_lambda_powertools.utilities import parameters
+        >>> from aws_lambda_powertools.utilities.parameters import ServiceDiscoveryProvider
+        >>> service_discovery_provider = ServiceDiscoveryProvider()
         >>>
-        >>> appconf_provider = parameters.AppConfigProvider(environment="my_env", application="my_app")
-        >>>
-        >>> value : bytes = appconf_provider.get("my_conf")
+        >>> value = service_discovery_provider.get("service_id", InstanceId='instance_id")
         >>>
         >>> print(value)
-        My configuration value
+        '{"attribute1": "value1", "attribute2": "value2"}'
+        >>> value = service_discovery_provider.get("service_id", InstanceId="instance_id", Attribute="attribute1")
+        >>>
+        >>> print(value)
+        "value1"
 
-    **Retrieves a configuration value from App Config in another AWS region**
+    **Retrieves a parameter value from Systems Manager Parameter Store in another AWS region**
 
         >>> from botocore.config import Config
-        >>> from aws_lambda_powertools.utilities import parameters
+        >>> from aws_lambda_powertools.utilities.parameters import ServiceDiscoveryProvider
         >>>
         >>> config = Config(region_name="us-west-1")
-        >>> appconf_provider = parameters.AppConfigProvider(environment="my_env", application="my_app", config=config)
-        >>>
-        >>> value : bytes = appconf_provider.get("my_conf")
+        >>> service_discovery_provider = ServiceDiscoveryProvider(config=config)
+        >>> value = service_discovery_provider.get("service_id", InstanceId='instance_id")
         >>>
         >>> print(value)
-        My configuration value
+        '{"attribute1": "value1", "attribute2": "value2"}'
+        >>> value = service_discovery_provider.get("service_id", InstanceId="instance_id", Attribute="attribute1")
+        >>>
+        >>> print(value)
+        "value1"
 
+    **Retrieves multiple instances from Service Discovery service using NameSpace and ServiceName**
+
+        >>> from aws_lambda_powertools.utilities.parameters import ServiceDiscoveryProvider
+        >>> service_discovery_provider = ServiceDiscoveryProvider()
+        >>>
+        >>> values = service_discovery_provider.get_multiple("namespace", ServiceName="service_name")
+        >>>
+        >>> print(values)
+        [{
+            'InstanceId': 'instance_id',
+            'NamespaceName': 'namespace',
+            'ServiceName': 'service_name',
+            'HealthStatus': 'UNKNOWN',
+            'Attributes': {
+                'attribute1': 'first_instance_value1',
+                'attribute2': 'first_instance_value2',
+            }
+        },  {
+            'InstanceId': 'instance_id',
+            'NamespaceName': 'namespace',
+            'ServiceName': 'service_name',
+            'HealthStatus': 'UNKNOWN',
+            'Attributes': {
+                'attribute1': 'second_instance_value1',
+                'attribute2': 'second_instance_value2',
+            }
+        }]
     """
 
     client: Any = None
@@ -130,7 +160,7 @@ def get_service_attribute(
     **sdk_options
 ) -> Union[str, dict, bytes]:
     """
-    Retrieve a parameter value from AWS Secrets Manager
+    Retrieve an instance value from AWS Service Discovery
 
     Parameters
     ----------
@@ -158,23 +188,12 @@ def get_service_attribute(
 
     Example
     -------
-    **Retrieves a secret***
+    **Retrieves an instance***
 
-        >>> from aws_lambda_powertools.utilities.parameters import get_secret
+        >>> from aws_lambda_powertools.utilities.parameters import get_service_attribute
         >>>
-        >>> get_secret("my-secret")
+        >>> get_service_attribute("service_id", InstanceId="instance_id")
 
-    **Retrieves a secret and transforms using a JSON deserializer***
-
-        >>> from aws_lambda_powertools.utilities.parameters import get_secret
-        >>>
-        >>> get_secret("my-secret", transform="json")
-
-    **Retrieves a secret and passes custom arguments to the SDK**
-
-        >>> from aws_lambda_powertools.utilities.parameters import get_secret
-        >>>
-        >>> get_secret("my-secret", VersionId="f658cac0-98a5-41d9-b993-8a76a7799194")
     """
 
     # Only create the provider if this function is called at least once
