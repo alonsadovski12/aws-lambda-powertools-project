@@ -28,6 +28,7 @@ from aws_lambda_powertools.utilities.dynamodb_lock.exceptions import DynamoDBLoc
 
 LOGGER = Logger(__name__)
 
+
 class DynamoDBLockClient:
     """
     Provides distributed locks using DynamoDB's support for conditional reads/writes.
@@ -331,7 +332,8 @@ class DynamoDBLockClient:
         new_lock = DynamoDBLock(partition_key=partition_key, sort_key=sort_key, owner_name=self._owner_name,
                                 lease_duration=self._lease_duration.total_seconds(), record_version_number=str(uuid.uuid4()),
                                 expiry_time=int(time.time() + self._expiry_period.total_seconds()),
-                                additional_attributes=additional_attributes, app_callback=app_callback, lock_client=self, logger=self.logger)
+                                additional_attributes=additional_attributes, app_callback=app_callback, lock_client=self,
+                                logger=self.logger)
 
         start_time = time.monotonic()
         retry_timeout_time = start_time + retry_timeout.total_seconds()
@@ -359,8 +361,8 @@ class DynamoDBLockClient:
 
                     else:
                         self.logger.info('the lock not released yet', new_lock_unique_identifier=new_lock.unique_identifier,
-                                          last_record_version_number=last_record_version_number,
-                                          existing_lock_record_version_number=existing_lock.record_version_number)
+                                         last_record_version_number=last_record_version_number,
+                                         existing_lock_record_version_number=existing_lock.record_version_number)
                         last_record_version_number = existing_lock.record_version_number
                         last_version_fetch_time = time.monotonic()
             except ClientError as ex:
@@ -372,8 +374,12 @@ class DynamoDBLockClient:
 
             retry_count += 1
             self._wait_between_acquire_lock_retry(lock_uid=new_lock.unique_identifier, start_time=start_time, retry_index=retry_count,
-                                         retry_timeout_time=retry_timeout_time, retry_period=retry_period)
-
+                                                  retry_timeout_time=retry_timeout_time, retry_period=retry_period)
+    def get_lock_status(self, lock_id: str) -> str:
+        if lock_id in self._locks:
+            return self._locks.get(lock_id).status
+        else:
+            return None
 
     def release_lock(self, lock, best_effort=True):
         """
@@ -610,6 +616,8 @@ class DynamoDBLockClient:
         self._heartbeat_checker_thread.join()
         if release_locks:
             self._release_all_locks()
+        self._shutting_down = False # getting ready for next lock
+
 
     def __str__(self):
         """
@@ -618,9 +626,9 @@ class DynamoDBLockClient:
         return '%s::%s' % (self.__class__.__name__, self.__dict__)
 
     @classmethod
-    def create_dynamodb_table(cls, dynamodb_client, table_name, partition_key_name,
-                              sort_key_name, ttl_attribute_name=DEFAULT_TTL_ATTRIBUTE_NAME,
-                              read_capacity=_DEFAULT_READ_CAPACITY, write_capacity=_DEFAULT_WRITE_CAPACITY):
+    def create_dynamodb_table(cls, dynamodb_client, table_name, partition_key_name, sort_key_name,
+                              ttl_attribute_name=DEFAULT_TTL_ATTRIBUTE_NAME, read_capacity=_DEFAULT_READ_CAPACITY,
+                              write_capacity=_DEFAULT_WRITE_CAPACITY):
         """
         Helper method to create the DynamoDB table
 
@@ -676,4 +684,3 @@ class DynamoDBLockClient:
                 break
             else:
                 time.sleep(2)
-

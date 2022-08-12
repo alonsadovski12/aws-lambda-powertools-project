@@ -526,7 +526,7 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
     def error(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
         try:
             self._lock_acquire()
-            self._log(logging.ERROR, msg, None, *args, **kwargs)
+            self._log(logging.ERROR, msg, None, keys_to_obfuscate, *args, **kwargs)
         except Exception:
             self.exception('logger error exception.')
         finally:
@@ -544,7 +544,7 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
     def debug(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
         try:
             self._lock_acquire()
-            self._log(logging.DEBUG, msg, None, *args, **kwargs)
+            self._log(logging.DEBUG, msg, None, keys_to_obfuscate, *args, **kwargs)
         except Exception:
             self.exception('logger debug exception.')
         finally:
@@ -553,7 +553,7 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
     def exception(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
         try:
             self._lock_acquire()
-            self._log(logging.ERROR, msg, traceback.format_exc(), *args, **kwargs)
+            self._log(logging.ERROR, msg, traceback.format_exc(), keys_to_obfuscate, *args, **kwargs)
         except Exception:
             self._log_exception()
         finally:

@@ -1809,7 +1809,6 @@ def test_base_provider_get_force_update(mock_name, mock_value):
 
 
 
-###### TODO
 def test_service_discovery_get_specific_attribute(mock_name, mock_value, mock_version, config):
     """
     Test ServiceDiscoveryProvider.get() with a non-cached value
@@ -1909,8 +1908,6 @@ def test_ssm_provider_get_sdk_options_overwrite(mock_name, mock_value, mock_vers
     finally:
         stubber.deactivate()
 
-
-#####
 
 def test_service_discovery_provider_get_multiple(mock_name, mock_value, mock_version, config):
     """

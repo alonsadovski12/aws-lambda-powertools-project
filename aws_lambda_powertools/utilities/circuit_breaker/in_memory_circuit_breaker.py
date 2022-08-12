@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from math import floor, ceil
-from typing import List
+from typing import Callable, List
 
 from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.circuit_breaker.base.base_circuit_breaker import BaseCircuitBreaker, State
@@ -13,12 +13,12 @@ logger = Logger(__name__)
 class InMemoryCircuitBreaker(BaseCircuitBreaker):
     def __init__(self,
                  name: str,
-                 failure_threshold=None,
-                 recovery_timeout=None,
+                 failure_threshold: int = None,
+                 recovery_timeout: int = None,
                  expected_exception: List[Exception] = None,
-                 fallback_function=None,
-                 monitor=CircuitBreakerMonitor,
-                 logger=logger):
+                 fallback_function: Callable= None,
+                 monitor: CircuitBreakerMonitor = CircuitBreakerMonitor(),
+                 logger: Logger = logger):
         super().__init__(name, failure_threshold, recovery_timeout, expected_exception, fallback_function, monitor)
         self.logger = logger
 

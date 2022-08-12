@@ -3,7 +3,7 @@ from enum import Enum, auto
 from functools import wraps
 from inspect import isgeneratorfunction
 from time import sleep, time
-from typing import List
+from typing import Callable, List
 
 from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_exceptions import CircuitBreakerException
@@ -23,10 +23,10 @@ class BaseCircuitBreaker(ABC):
 
     def __init__(self,
                  name: str,
-                 failure_threshold=None,
-                 recovery_timeout=None,
+                 failure_threshold: int = None,
+                 recovery_timeout: int = None,
                  expected_exception: List[Exception] = None,
-                 fallback_function=None,
+                 fallback_function: Callable = None,
                  monitor=None,
                  ):
         """
@@ -110,7 +110,7 @@ class BaseCircuitBreaker(ABC):
         def wrapper(*args, **kwargs):
             try:
                 return call(function, *args, **kwargs)
-            except:
+            except Exception as ex:
                 self.logger.error(f'failed to execute function, count={self._failure_count}')
                 sleep((self._recovery_timeout_in_milli / self.SECONDS_TO_SECONDS_FACTOR) / self._failure_threshold )
                 while not self._threshold_occurred():
@@ -171,15 +171,6 @@ class BaseCircuitBreaker(ABC):
     @property
     @abstractmethod
     def state(self):
-        pass
-
-    @property
-    @abstractmethod
-    def open_until(self):
-        """
-        The approximate datetime when the circuit breaker will try to recover
-        :return: datetime
-        """
         pass
 
     @property

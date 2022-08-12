@@ -7,7 +7,7 @@ import json
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .exceptions import GetParameterError, TransformParameterError
 
@@ -176,6 +176,11 @@ class BaseProvider(ABC):
         Retrieve multiple parameter values from the underlying parameter store
         """
         raise NotImplementedError()
+    
+    def flush_cache_keys(self, keys_to_flush: List[str], transform: Optional[str] = None) -> None:
+        for key in keys_to_flush:
+            store_key = (key, transform)
+            self.store.pop(store_key, None)
 
     def clear_cache(self):
         self.store.clear()
