@@ -5,10 +5,11 @@ from inspect import isgeneratorfunction
 from time import sleep, time
 from typing import Callable, List
 
-from aws_lambda_powertools.logging import Logger
+from aws_lambda_powertools.logging_v2 import Logger
 from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_exceptions import CircuitBreakerException
 
 LOGGER = Logger(__name__)
+
 
 class State(Enum):
     CLOSED = auto()
@@ -21,14 +22,15 @@ class BaseCircuitBreaker(ABC):
     RECOVERY_TIMEOUT = 30
     SECONDS_TO_SECONDS_FACTOR = 1000
 
-    def __init__(self,
-                 name: str,
-                 failure_threshold: int = None,
-                 recovery_timeout: int = None,
-                 expected_exception: List[Exception] = None,
-                 fallback_function: Callable = None,
-                 monitor=None,
-                 ):
+    def __init__(
+        self,
+        name: str,
+        failure_threshold: int = None,
+        recovery_timeout: int = None,
+        expected_exception: List[Exception] = None,
+        fallback_function: Callable = None,
+        monitor=None,
+    ):
         """
         Construct a circuit breaker.
         :param failure_threshold: break open after this many failures
@@ -52,7 +54,7 @@ class BaseCircuitBreaker(ABC):
         self._state = State.CLOSED
         self._opened = self.current_milli_time()
         self.logger = LOGGER
-    
+
     def _threshold_occurred(self) -> bool:
         return self._failure_count >= self._failure_threshold
 
@@ -94,8 +96,8 @@ class BaseCircuitBreaker(ABC):
             return call(function, *args, **kwargs)
 
         return wrapper
-    
-    def retry_until_close(self, function): 
+
+    def retry_until_close(self, function):
         if self._name is None:
             self._name = function.__name__
 
@@ -112,17 +114,17 @@ class BaseCircuitBreaker(ABC):
                 return call(function, *args, **kwargs)
             except Exception as ex:
                 self.logger.error(f'failed to execute function, count={self._failure_count}')
-                sleep((self._recovery_timeout_in_milli / self.SECONDS_TO_SECONDS_FACTOR) / self._failure_threshold )
+                sleep((self._recovery_timeout_in_milli / self.SECONDS_TO_SECONDS_FACTOR) / self._failure_threshold)
                 while not self._threshold_occurred():
                     try:
                         return call(function, *args, **kwargs)
                     except:
                         self.logger.error(f'failed to execute function, count={self._failure_count}')
-                        sleep((self._recovery_timeout_in_milli / self.SECONDS_TO_SECONDS_FACTOR) / self._failure_threshold )
+                        sleep((self._recovery_timeout_in_milli / self.SECONDS_TO_SECONDS_FACTOR) / self._failure_threshold)
                 if self.fallback_function:
                     return self.fallback_function(*args, **kwargs)
                 raise CircuitBreakerException(self)
-        
+
         return wrapper
 
     def call(self, func, *args, **kwargs):
@@ -147,7 +149,6 @@ class BaseCircuitBreaker(ABC):
     def is_expected_failure(self, curr_exception: Exception) -> bool:
         return any(issubclass(curr_exception, exc) for exc in self._expected_exception)
 
-        
     def current_milli_time(self) -> int:
         return round(time() * self.SECONDS_TO_SECONDS_FACTOR)
 
