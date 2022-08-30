@@ -2,7 +2,7 @@
 import traceback
 from typing import Any, Callable, Dict, Optional
 
-from aws_lambda_context import LambdaContext
+from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.middleware_factory import lambda_handler_decorator
 
 from aws_lambda_powertools.utilities.error_handler.constants import ErrorDestinationEnum

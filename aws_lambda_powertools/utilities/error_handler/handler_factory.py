@@ -1,5 +1,4 @@
-from aws_lambda_context import LambdaContext
-
+from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.utilities.error_handler.constants import ErrorDestinationEnum
 from aws_lambda_powertools.utilities.error_handler.error_destination_interface import ErrorDestinationInterface
 from aws_lambda_powertools.utilities.error_handler.exception import ErrorHandlerException

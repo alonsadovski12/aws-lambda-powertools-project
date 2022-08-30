@@ -2,7 +2,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict
 
-from aws_lambda_context import LambdaContext
+from aws_lambda_powertools.utilities.typing import LambdaContext
 
 
 class ErrorDestinationInterface(metaclass=ABCMeta):
