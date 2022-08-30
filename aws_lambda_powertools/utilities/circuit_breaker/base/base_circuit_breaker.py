@@ -97,7 +97,7 @@ class BaseCircuitBreaker(ABC):
 
         return wrapper
 
-    def retry_until_close(self, function):
+    def retry_until_done(self, function):
         if self._name is None:
             self._name = function.__name__
 

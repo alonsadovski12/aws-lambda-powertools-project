@@ -152,7 +152,7 @@ def test_retry():
 
     # mock opened prop to see if fallback is called with correct parameters.
     # cb.opened = lambda self: True
-    func_decorated = cb.retry_until_close(retry_method)
+    func_decorated = cb.retry_until_done(retry_method)
 
     func_decorated(test='test')
 
@@ -176,7 +176,7 @@ def test_retry_3_times():
 
     # mock opened prop to see if fallback is called with correct parameters.
     # cb.opened = lambda self: True
-    func_decorated = cb.retry_until_close(retry_method)
+    func_decorated = cb.retry_until_done(retry_method)
 
     func_decorated()
 
