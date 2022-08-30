@@ -4,7 +4,6 @@
 """
 ֿֿBased on:
 https://python-dynamodb-lock.readthedocs.io/en/latest/index.html
-https://github.com/mohankishore/python_dynamodb_lock
 
 This is a general purpose distributed locking library built on top of DynamoDB. It is heavily
 "inspired" by the java-based AmazonDynamoDBLockClient library, and supports both coarse-grained
