@@ -5,21 +5,21 @@ import logging
 import random
 import re
 import string
-from ast import Dict
+from ast import Dict, literal_eval
 from collections import namedtuple
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterable, List, Optional, Union
 
 import pytest
 
-from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools.logging import correlation_paths
-from aws_lambda_powertools.logging.exceptions import InvalidLoggerSamplingRateError
-from aws_lambda_powertools.logging.formatter import BasePowertoolsFormatter, LambdaPowertoolsFormatter
-from aws_lambda_powertools.logging.logger import set_package_logger
+from aws_lambda_powertools import Tracer
+from aws_lambda_powertools.logging_v2 import Logger, correlation_paths
+from aws_lambda_powertools.logging_v2.exceptions import InvalidLoggerSamplingRateError
+from aws_lambda_powertools.logging_v2.formatter import BasePowertoolsFormatter, LambdaPowertoolsFormatter
+from aws_lambda_powertools.logging_v2.logger import set_package_logger
 from aws_lambda_powertools.shared import constants
 from aws_lambda_powertools.utilities.data_classes import S3Event, event_source
-
+from aws_lambda_powertools.utilities.obfuscater.obfuscator import Obfuscator
 
 @pytest.fixture
 def stdout():
@@ -135,7 +135,7 @@ def test_inject_lambda_context_log_event_request(lambda_context, stdout, lambda_
 
     # THEN logger should log event received from Lambda
     logged_event, _ = capture_multiple_logging_statements_output(stdout)
-    assert logged_event["message"] == lambda_event
+    assert literal_eval(logged_event["message"]) == lambda_event
 
 
 def test_inject_lambda_context_log_event_request_env_var(
@@ -155,7 +155,7 @@ def test_inject_lambda_context_log_event_request_env_var(
 
     # THEN logger should log event received from Lambda
     logged_event, _ = capture_multiple_logging_statements_output(stdout)
-    assert logged_event["message"] == lambda_event
+    assert literal_eval(logged_event["message"]) == lambda_event
 
 
 def test_inject_lambda_context_log_no_request_by_default(
@@ -174,31 +174,6 @@ def test_inject_lambda_context_log_no_request_by_default(
     # THEN logger should not log event received by lambda handler
     log = capture_logging_output(stdout)
     assert log["message"] != lambda_event
-
-
-def test_inject_lambda_cold_start(lambda_context, stdout, service_name):
-    # cold_start can be false as it's a global variable in Logger module
-    # so we reset it to simulate the correct behaviour
-    # since Lambda will only import our logger lib once per concurrent execution
-    from aws_lambda_powertools.logging import logger
-
-    logger.is_cold_start = True
-
-    # GIVEN Logger is initialized
-    logger = Logger(service=service_name, stream=stdout)
-
-    # WHEN a lambda function is decorated with logger, and called twice
-    @logger.inject_lambda_context
-    def handler(event, context):
-        logger.info("Hello")
-
-    handler({}, lambda_context)
-    handler({}, lambda_context)
-
-    # THEN cold_start key should only be true in the first call
-    first_log, second_log = capture_multiple_logging_statements_output(stdout)
-    assert first_log["cold_start"] is True
-    assert second_log["cold_start"] is False
 
 
 def test_package_logger_stream(stdout):
@@ -371,7 +346,8 @@ def test_logger_record_caller_location(stdout, service_name):
     # the correct caller resolution
     caller_fn_name = inspect.currentframe().f_code.co_name
     log = capture_logging_output(stdout)
-    assert caller_fn_name in log["location"]
+
+    assert caller_fn_name in log["origin_func_name"]
 
 
 def test_logger_do_not_log_twice_when_root_logger_is_setup(stdout, service_name):
@@ -399,16 +375,16 @@ def test_logger_extra_kwargs(stdout, service_name):
     # WHEN `request_id` is an extra field in a log message to the existing structured log
     fields = {"request_id": "blah"}
 
-    logger.info("with extra fields", extra=fields)
+    logger.info("with extra fields", **fields)
     logger.info("without extra fields")
 
     extra_fields_log, no_extra_fields_log = capture_multiple_logging_statements_output(stdout)
 
     # THEN first log should have request_id field in the root structure
-    assert "request_id" in extra_fields_log
+    assert "request_id" in extra_fields_log.get('context_info')
 
     # THEN second log should not have request_id in the root structure
-    assert "request_id" not in no_extra_fields_log
+    assert "request_id" not in no_extra_fields_log.get('message')
 
 
 def test_logger_log_twice_when_log_filter_isnt_present_and_root_logger_is_setup(monkeypatch, stdout, service_name):
@@ -443,7 +419,7 @@ def test_logger_exception_extract_exception_name(stdout, service_name):
 
     # THEN we expect a "exception_name" to be "ValueError"
     log = capture_logging_output(stdout)
-    assert "ValueError" == log["exception_name"]
+    assert "ValueError" in log.get('stack_trace')
 
 
 def test_logger_set_correlation_id(lambda_context, stdout, service_name):
@@ -663,46 +639,6 @@ def test_clear_state_on_inject_lambda_context(lambda_context, stdout, service_na
     assert "my_key" not in second_log
 
 
-def test_clear_state_keeps_standard_keys(lambda_context, stdout, service_name):
-    # GIVEN
-    logger = Logger(service=service_name, stream=stdout)
-    standard_keys = ["level", "location", "message", "timestamp", "service"]
-
-    # WHEN clear_state is set
-    @logger.inject_lambda_context(clear_state=True)
-    def handler(event, context):
-        logger.info("Foo")
-
-    # THEN all standard keys should be available as usual
-    handler({}, lambda_context)
-    handler({}, lambda_context)
-
-    first_log, second_log = capture_multiple_logging_statements_output(stdout)
-    for key in standard_keys:
-        assert key in first_log
-        assert key in second_log
-
-
-def test_clear_state_keeps_custom_keys(lambda_context, stdout, service_name):
-    # GIVEN
-    location_format = "%(module)s.%(funcName)s:clear_state"
-    logger = Logger(service=service_name, stream=stdout, location=location_format, custom_key="foo")
-
-    # WHEN clear_state is set
-    @logger.inject_lambda_context(clear_state=True)
-    def handler(event, context):
-        logger.info("Foo")
-
-    # THEN all standard keys should be available as usual
-    handler({}, lambda_context)
-    handler({}, lambda_context)
-
-    first_log, second_log = capture_multiple_logging_statements_output(stdout)
-    for log in (first_log, second_log):
-        assert "foo" == log["custom_key"]
-        assert "test_logger.handler:clear_state" == log["location"]
-
-
 def test_clear_state_keeps_exception_keys(lambda_context, stdout, service_name):
     # GIVEN
     logger = Logger(service=service_name, stream=stdout)
@@ -718,7 +654,7 @@ def test_clear_state_keeps_exception_keys(lambda_context, stdout, service_name):
     # THEN we expect a "exception_name" to be "ValueError"
     handler({}, lambda_context)
     log = capture_logging_output(stdout)
-    assert "ValueError" == log["exception_name"]
+    assert "ValueError" in log.get('stack_trace')
 
 
 def test_inject_lambda_context_allows_handler_with_kwargs(lambda_context, stdout, service_name):
@@ -772,4 +708,90 @@ def test_inject_lambda_context_log_event_request_data_classes(lambda_context, st
 
     # THEN logger should log event received from Lambda
     logged_event, _ = capture_multiple_logging_statements_output(stdout)
-    assert logged_event["message"] == lambda_event
+    assert literal_eval(logged_event["message"]) == lambda_event
+
+def test_logger_add_invocation_keys(stdout, service_name):
+    # GIVEN Logger is initialized
+    logger = Logger(service=service_name, stream=stdout)
+
+    # WHEN `request_id` is an extra field in a log message to the existing structured log
+    fields = {"request_id": "blah"}
+    logger.add_invocation_keys(for_test='persistent')
+
+    logger.info("with extra fields", **fields)
+    logger.info("without extra fields")
+
+    extra_fields_log, no_extra_fields_log = capture_multiple_logging_statements_output(stdout)
+
+    assert "for_test" in extra_fields_log.get('context_info')
+    assert "for_test" in no_extra_fields_log.get('context_info')
+
+def test_logger_add_and_remove_invocation_keys(stdout, service_name):
+    # GIVEN Logger is initialized
+    logger = Logger(service=service_name, stream=stdout)
+
+    # WHEN `request_id` is an extra field in a log message to the existing structured log
+    fields = {"request_id": "blah"}
+    logger.add_invocation_keys(for_test='persistent', for_test2='will be removed')
+
+    logger.info("with extra fields", **fields)
+    logger.remove_invocation_keys(['for_test2'])
+    logger.info("without extra fields")
+
+    extra_fields_log, no_extra_fields_log = capture_multiple_logging_statements_output(stdout)
+
+    assert "for_test" in extra_fields_log.get('context_info')
+    assert "for_test2" in extra_fields_log.get('context_info')
+    assert "for_test" in no_extra_fields_log.get('context_info')
+    assert "for_test2" not in no_extra_fields_log.get('context_info')
+
+
+def test_logger_add_thread_id(stdout, service_name):
+    # GIVEN Logger is initialized
+    logger = Logger(service=service_name, stream=stdout, multithreaded=True)
+
+    logger.info("check thread id")
+
+    log= capture_logging_output(stdout)
+    assert "thread_id" in log.get('context_info')
+
+def test_logger_no_thread_id(stdout, service_name):
+    # GIVEN Logger is initialized
+    logger = Logger(service=service_name, stream=stdout)
+
+    logger.info("check thread id")
+
+    log = capture_logging_output(stdout)
+    assert "thread_id" not in log.get('context_info')
+
+def test_obfuscation_in_message(stdout, service_name):
+    input_event = {"greeting": "hello", "name": 'test'}
+    logger = Logger(service=service_name, stream=stdout, obfuscator=Obfuscator())
+    logger.info(input_event, keys_to_obfuscate=['name'])
+    logged_event = capture_logging_output(stdout)
+    assert literal_eval(logged_event["message"]).get('name') == '****'
+
+def test_obfuscation_in_added_keys(stdout, service_name):
+    input_event = {"greeting": "hello", "name": 'test'}
+    logger = Logger(service=service_name, stream=stdout, obfuscator=Obfuscator())
+    logger.add_invocation_keys(email='private')
+    logger.info(input_event, keys_to_obfuscate=['email'])
+    logged_event = capture_logging_output(stdout)
+    assert logged_event["context_info"].get('email') == '*******'
+
+def test_obfuscation_in_extra_fields(stdout, service_name):
+    input_event = {"greeting": "hello", "name": 'test'}
+    logger = Logger(service=service_name, stream=stdout, obfuscator=Obfuscator())
+    logger.info(input_event, keys_to_obfuscate=['email'], email='private')
+    logged_event = capture_logging_output(stdout)
+    assert logged_event["context_info"].get('email') == '*******'
+
+def test_obfuscation_in_extra_fields_and_message_and_added_keys(stdout, service_name):
+    input_event = {"greeting": "hello", "name": 'test'}
+    logger = Logger(service=service_name, stream=stdout, obfuscator=Obfuscator())
+    logger.add_invocation_keys(name='keys')
+    logger.info(input_event, keys_to_obfuscate=['email', 'name'], email='private')
+    logged_event = capture_logging_output(stdout)
+    assert literal_eval(logged_event["message"]).get('name') == '****'
+    assert logged_event["context_info"].get('name') == '****'
+    assert logged_event["context_info"].get('email') == '*******'

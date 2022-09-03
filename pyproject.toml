@@ -24,6 +24,7 @@ python = "^3.6.2"
 aws-xray-sdk = "^2.8.0"
 fastjsonschema = "^2.14.5"
 boto3 = "^1.18"
+flatten-dict = "*"
 pydantic = {version = "^1.8.2", optional = true }
 email-validator = {version = "*", optional = true }
 

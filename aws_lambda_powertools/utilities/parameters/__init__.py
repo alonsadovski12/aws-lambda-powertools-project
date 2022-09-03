@@ -10,6 +10,7 @@ from .dynamodb import DynamoDBProvider
 from .exceptions import GetParameterError, TransformParameterError
 from .secrets import SecretsProvider, get_secret
 from .ssm import SSMProvider, get_parameter, get_parameters
+from .service_discovery import ServiceDiscoveryProvider, get_service_attribute
 
 __all__ = [
     "AppConfigProvider",
@@ -19,9 +20,11 @@ __all__ = [
     "SecretsProvider",
     "SSMProvider",
     "TransformParameterError",
+    "ServiceDiscoveryProvider",
     "get_app_config",
     "get_parameter",
     "get_parameters",
     "get_secret",
     "clear_caches",
+    "get_service_attribute"
 ]
