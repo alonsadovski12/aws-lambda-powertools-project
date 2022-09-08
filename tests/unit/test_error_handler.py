@@ -8,7 +8,7 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
-from aws_lambda_context import LambdaContext
+from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.utilities.error_handler.constants import (DEFAULT_ERROR_MESSAGE, ErrorDestinationEnum)
 from aws_lambda_powertools.utilities.error_handler.error_destination_interface import ErrorDestinationInterface
 from aws_lambda_powertools.utilities.error_handler.error_handler import error_handler
@@ -27,14 +27,13 @@ def get_logger() -> object:
 
 def generate_context() -> LambdaContext:
     context = LambdaContext()
-    context.aws_request_id = '1'
-    context.function_name = 'my_handler'
+    context._aws_request_id = '1'
+    context._function_name = 'test_function_name'
     return context
-
 
 def test_error_handler_interface_instantiate():
     with pytest.raises(TypeError) as ex:
-        ErrorDestinationInterface(lambda_context=LambdaContext(), exception=Exception(), logger=None)
+        ErrorDestinationInterface(lambda_context=generate_context(), exception=Exception(), logger=None)
     assert ex.match('instantiate abstract class ErrorDestinationInterface with abstract methods')
 
 
@@ -54,7 +53,7 @@ def test_sqs_destination_build_error_message():
                                          trace=TRACE)
     assert sqs._build_error_message() == {
         'error': "Exception('I failed')",
-        'lambda_name': 'my_handler',
+        'lambda_name': 'test_function_name',
         'request_id': '1',
         'traceback': TRACE
     }

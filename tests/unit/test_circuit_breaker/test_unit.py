@@ -25,7 +25,7 @@ def test_circuitbreaker_error__str__():
     cb._last_failure = Exception()
     error = CircuitBreakerException(cb)
 
-    assert str(error).startswith('Circuit Foobar OPEN until ')
+    assert str(error).startswith('Circuit Foobar (')
     assert str(error).endswith('(last_failure: Exception())')
 
 
