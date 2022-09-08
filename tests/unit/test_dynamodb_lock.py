@@ -127,14 +127,6 @@ class TestDynamoDBLockClient(unittest.TestCase):
         self.assertTrue(lock.unique_identifier in locks)
         self.assertEqual(locks[lock.unique_identifier], lock)
 
-    def test_acquire_lock_after_close(self):
-        self.lock_client.close()
-        try:
-            self.lock_client.acquire_lock('key')
-            self.fail('Expected an error')
-        except DynamoDBLockError as ex:
-            self.assertEqual(ex.code, DynamoDBLockError.CLIENT_SHUTDOWN)
-
     def test_acquire_lock_after_release(self):
         self.ddb_table.get_item = mock.MagicMock('get_item')
         self.ddb_table.get_item.side_effect = [

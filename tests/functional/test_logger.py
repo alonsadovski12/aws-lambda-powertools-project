@@ -13,10 +13,10 @@ from typing import Any, Callable, Iterable, List, Optional, Union
 import pytest
 
 from aws_lambda_powertools import Tracer
-from aws_lambda_powertools.logging_v2 import Logger, correlation_paths
-from aws_lambda_powertools.logging_v2.exceptions import InvalidLoggerSamplingRateError
-from aws_lambda_powertools.logging_v2.formatter import BasePowertoolsFormatter, LambdaPowertoolsFormatter
-from aws_lambda_powertools.logging_v2.logger import set_package_logger
+from aws_lambda_powertools.logging import Logger, correlation_paths
+from aws_lambda_powertools.logging.exceptions import InvalidLoggerSamplingRateError
+from aws_lambda_powertools.logging.formatter import BasePowertoolsFormatter, LambdaPowertoolsFormatter
+from aws_lambda_powertools.logging.logger import set_package_logger
 from aws_lambda_powertools.shared import constants
 from aws_lambda_powertools.utilities.data_classes import S3Event, event_source
 from aws_lambda_powertools.utilities.obfuscater.obfuscator import Obfuscator

@@ -5,7 +5,7 @@ from inspect import isgeneratorfunction
 from time import sleep, time
 from typing import Callable, List
 
-from aws_lambda_powertools.logging_v2 import Logger
+from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_exceptions import CircuitBreakerException
 
 LOGGER = Logger(__name__)

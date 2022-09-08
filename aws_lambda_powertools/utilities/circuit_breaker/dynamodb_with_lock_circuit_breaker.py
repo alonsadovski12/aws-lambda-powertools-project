@@ -7,7 +7,7 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
-from aws_lambda_powertools.logging_v2 import Logger
+from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.circuit_breaker.base.base_circuit_breaker import BaseCircuitBreaker, State
 from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_exceptions import CircuitBreakerException
 from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_monitor import CircuitBreakerMonitor

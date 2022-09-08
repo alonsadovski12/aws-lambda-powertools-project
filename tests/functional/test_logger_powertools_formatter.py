@@ -1,4 +1,5 @@
 """aws_lambda_logging tests."""
+import ast
 import io
 import json
 import random
@@ -58,7 +59,7 @@ def test_logging_exception_traceback(stdout, service_name):
 
     check_log_dict(log_dict)
     assert "ERROR" == log_dict["level"]
-    assert "exception" in log_dict
+    assert "stack_trace" in log_dict
 
 
 def test_setup_with_invalid_log_level(stdout, service_name):
@@ -70,7 +71,8 @@ def test_setup_with_invalid_log_level(stdout, service_name):
 def check_log_dict(log_dict):
     assert "timestamp" in log_dict
     assert "level" in log_dict
-    assert "location" in log_dict
+    assert "origin_func_name" in log_dict
+    assert "origin_service_name" in log_dict
     assert "message" in log_dict
 
 
@@ -82,7 +84,7 @@ def test_with_dict_message(stdout, service_name):
 
     log_dict = json.loads(stdout.getvalue())
 
-    assert msg == log_dict["message"]
+    assert str(msg) == log_dict["message"]
 
 
 def test_with_json_message(stdout, service_name):
@@ -105,9 +107,9 @@ def test_with_unserializable_value_in_message(stdout, service_name):
     msg = {"x": Unserializable()}
     logger.debug(msg)
 
-    log_dict = json.loads(stdout.getvalue())
-
-    assert log_dict["message"]["x"].startswith("<")
+    message = json.loads(stdout.getvalue())["message"]
+    unserializable_value = message.split("x':")[1].lstrip()
+    assert unserializable_value.startswith("<")
 
 
 def test_with_unserializable_value_in_message_custom(stdout, service_name):
@@ -128,7 +130,8 @@ def test_with_unserializable_value_in_message_custom(stdout, service_name):
     log_dict = json.loads(stdout.getvalue())
 
     # THEN json_default should not be in the log message and the custom unserializable handler should be used
-    assert log_dict["message"]["x"] == "<non-serializable: Unserializable>"
+    unserializable_value = log_dict["message"].split("x':")[1].lstrip()
+    assert "Unserializable" in unserializable_value
     assert "json_default" not in log_dict
 
 
@@ -142,7 +145,7 @@ def test_log_dict_key_seq(stdout, service_name):
     log_dict: dict = json.loads(stdout.getvalue())
 
     # THEN the beginning key sequence must be `level,location,message,timestamp`
-    assert ",".join(list(log_dict.keys())[:4]) == "level,location,message,timestamp"
+    assert ",".join(list(log_dict.keys())) == "level,message,timestamp,service,origin_service_name,origin_func_name,context_info"
 
 
 def test_log_dict_key_custom_seq(stdout, service_name):
@@ -156,36 +159,6 @@ def test_log_dict_key_custom_seq(stdout, service_name):
 
     # THEN the first key should be "message"
     assert list(log_dict.keys())[0] == "message"
-
-
-def test_log_custom_formatting(stdout, service_name):
-    # GIVEN a logger where we have a custom `location`, 'datefmt' format
-    logger = Logger(service=service_name, stream=stdout, location="[%(funcName)s] %(module)s", datefmt="fake-datefmt")
-
-    # WHEN logging a message
-    logger.info("foo")
-
-    log_dict: dict = json.loads(stdout.getvalue())
-
-    # THEN the `location` and "timestamp" should match the formatting
-    assert log_dict["location"] == "[test_log_custom_formatting] test_logger_powertools_formatter"
-    assert log_dict["timestamp"] == "fake-datefmt"
-
-
-def test_log_dict_key_strip_nones(stdout, service_name):
-    # GIVEN a logger confirmation where we set `location` and `timestamp` to None
-    # Note: level and service cannot be suppressed
-    logger = Logger(stream=stdout, level=None, location=None, timestamp=None, sampling_rate=None, service=None)
-
-    # WHEN logging a message
-    logger.info("foo")
-
-    log_dict: dict = json.loads(stdout.getvalue())
-
-    # THEN the keys should only include `level`, `message`, `service`
-    assert sorted(log_dict.keys()) == ["level", "message", "service"]
-    assert log_dict["service"] == "service_undefined"
-
 
 def test_log_dict_xray_is_present_when_tracing_is_enabled(stdout, monkeypatch, service_name):
     # GIVEN a logger is initialized within a Lambda function with X-Ray enabled
@@ -275,16 +248,3 @@ def test_logging_various_primitives(stdout, service_name, message):
     # THEN it should raise no serialization/deserialization error
     logger.info(message)
     json.loads(stdout.getvalue())
-
-
-def test_log_formatting(stdout, service_name):
-    # GIVEN a logger with default settings
-    logger = Logger(service=service_name, stream=stdout)
-
-    # WHEN logging a message with formatting
-    logger.info('["foo %s %d %s", null]', "bar", 123, [1, None])
-
-    log_dict: dict = json.loads(stdout.getvalue())
-
-    # THEN the formatting should be applied (NB. this is valid json, but hasn't be parsed)
-    assert log_dict["message"] == '["foo bar 123 [1, None]", null]'

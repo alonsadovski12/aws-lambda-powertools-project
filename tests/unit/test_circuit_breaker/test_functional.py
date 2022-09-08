@@ -9,6 +9,7 @@ from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_monitor imp
 
 TABLE_NAME = 'AlonsadovskiHelloDemocircuit-ServiceCircuitBreaker01F9D601-1K8M53UDO7S6D'
 NUM = 0
+THRESH3 = 0
 RAISE_EXCEPTION = False
 
 def pseudo_remote_call():
@@ -50,9 +51,9 @@ def circuit_threshold_2_timeout_1():
 
 @InMemoryCircuitBreaker(failure_threshold=3, recovery_timeout=1, name="threshold_3")
 def circuit_threshold_3_timeout_1():
-    global NUM
-    NUM = NUM + 1
-    if NUM == 1:
+    global THRESH3
+    THRESH3 = THRESH3 + 1
+    if THRESH3 == 1:
         return True
     raise IOError('Connection refused')
 
