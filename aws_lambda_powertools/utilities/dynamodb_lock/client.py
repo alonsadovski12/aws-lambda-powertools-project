@@ -19,7 +19,7 @@ from decimal import Decimal
 from typing import Dict
 
 from botocore.exceptions import ClientError
-from aws_lambda_powertools.logging_v2.logger import Logger
+from aws_lambda_powertools.logging.logger import Logger
 
 from aws_lambda_powertools.utilities.dynamodb_lock.consts import DEFAULT_TTL_ATTRIBUTE_NAME, CONDITIONAL_CHECK_EXCEPTION
 from aws_lambda_powertools.utilities.dynamodb_lock.db_lock import BaseDynamoDBLock, DynamoDBLock

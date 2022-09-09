@@ -13,7 +13,7 @@ import threading
 import time
 from urllib.parse import quote
 
-from aws_lambda_powertools.logging_v2.logger import Logger
+from aws_lambda_powertools.logging.logger import Logger
 
 LOGGER = Logger(__name__)
 

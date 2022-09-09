@@ -4,7 +4,10 @@ import logging
 import os
 import random
 import sys
-from typing import IO, Any, Callable, Dict, Iterable, Optional, TypeVar, Union
+import traceback
+from threading import Lock, get_ident
+from types import CodeType
+from typing import IO, Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
 
 import jmespath
 
@@ -14,6 +17,7 @@ from .exceptions import InvalidLoggerSamplingRateError
 from .filters import SuppressFilter
 from .formatter import BasePowertoolsFormatter, LambdaPowertoolsFormatter
 from .lambda_context import build_lambda_context_model
+from aws_lambda_powertools.utilities.obfuscater.obfuscator import Obfuscator
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +80,10 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
         custom logging formatter that implements PowertoolsFormatter
     logger_handler: logging.Handler, optional
         custom logging handler e.g. logging.FileHandler("file.log")
+    multithreaded: bool, optional
+        whether or not lock the log output
+    obfuscator: Obfuscator, optional
+        whether or not obfuscate logs
 
     Parameters propagated to LambdaPowertoolsFormatter
     --------------------------------------------------
@@ -181,6 +189,8 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
         stream: Optional[IO[str]] = None,
         logger_formatter: Optional[PowertoolsFormatter] = None,
         logger_handler: Optional[logging.Handler] = None,
+        multithreaded: Optional[bool] = False,
+        obfuscator: Optional[Obfuscator] = None,
         **kwargs,
     ):
         self.service = resolve_env_var_choice(
@@ -196,9 +206,12 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
         self._is_deduplication_disabled = resolve_truthy_env_var_choice(
             env=os.getenv(constants.LOGGER_LOG_DEDUPLICATION_ENV, "false")
         )
-        self._default_log_keys = {"service": self.service, "sampling_rate": self.sampling_rate}
+        self.reset_invocation_keys()
         self._logger = self._get_logger()
-
+        self._multithreaded = multithreaded
+        if self._multithreaded:
+            self._lock: Lock = Lock()
+        self._obfuscator = obfuscator
         self._init_logger(**kwargs)
 
     def __getattr__(self, name):
@@ -449,6 +462,144 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
         frame = inspect.currentframe()
         caller_frame = frame.f_back.f_back.f_back
         return caller_frame.f_globals["__name__"]
+    
+    def add_invocation_keys(self, **kwargs) -> None:
+        for key, value in kwargs.items():
+            self._default_log_keys[key] = value
+    
+    def remove_invocation_keys(self, keys: List[str]) -> None:
+        for key in keys:
+            self._default_log_keys.pop(key)
+
+    def reset_invocation_keys(self) -> None:
+        self._default_log_keys = {"service": self.service, "sampling_rate": self.sampling_rate}
+
+    def _enrich_kwargs_with_invocation_keys(self, log_kwargs: Dict[str, Any]) -> None:
+        for key, value in self._default_log_keys.items():
+            if log_kwargs.get(key) is None:
+                log_kwargs[key] = value
+        if self._multithreaded:
+            log_kwargs['thread_id'] = get_ident()
+
+    def _lock_acquire(self) -> None:
+        if self._multithreaded:
+            self._lock.acquire()
+
+    def _lock_release(self) -> None:
+        if self._multithreaded:
+            self._lock.release()
+    
+    def _obfuscate(self, obj_to_obfuscate: Any, keys_to_obfuscate: List[str]) -> Dict:
+        if self._obfuscator and keys_to_obfuscate:
+            if isinstance(obj_to_obfuscate, dict):
+                return self._obfuscator.obfuscate(obj_to_obfuscate, keys_to_obfuscate)
+        return obj_to_obfuscate
+
+    def system(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
+        try:
+            self._lock_acquire()
+            self._log(self.SYSTEM_LEVEL, msg, None, keys_to_obfuscate,*args, **kwargs)
+        except Exception:
+            self.exception('logger system exception.')
+        finally:
+            self._lock_release()
+
+
+    def info(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
+        try:
+            self._lock_acquire()
+            self._log(logging.INFO, msg, None, keys_to_obfuscate, *args, **kwargs)
+        except Exception:
+            self.exception('logger info exception.')
+        finally:
+            self._lock_release()
+
+    def warning(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
+        try:
+            self._lock_acquire()
+            self._log(logging.WARNING, msg, None, keys_to_obfuscate, *args, **kwargs)
+        except Exception:
+            self.exception('logger warning exception.')
+        finally:
+            self._lock_release()
+
+    def error(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
+        try:
+            self._lock_acquire()
+            self._log(logging.ERROR, msg, None, keys_to_obfuscate, *args, **kwargs)
+        except Exception:
+            self.exception('logger error exception.')
+        finally:
+            self._lock_release()
+
+    def critical(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
+        try:
+            self._lock_acquire()
+            self._log(logging.CRITICAL, msg, None, keys_to_obfuscate, *args, **kwargs)
+        except Exception:
+            self.exception('logger critical exception.')
+        finally:
+            self._lock_release()
+
+    def debug(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
+        try:
+            self._lock_acquire()
+            self._log(logging.DEBUG, msg, None, keys_to_obfuscate, *args, **kwargs)
+        except Exception:
+            self.exception('logger debug exception.')
+        finally:
+            self._lock_release()
+
+    def exception(self, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
+        try:
+            self._lock_acquire()
+            self._log(logging.ERROR, msg, traceback.format_exc(), keys_to_obfuscate, *args, **kwargs)
+        except Exception:
+            self._log_exception()
+        finally:
+            self._lock_release()
+
+    def _log_exception(self) -> None:
+        logging.error('Exception during logger operation', exc_info=True)
+
+    def log(self, level, msg: str, keys_to_obfuscate: Optional[List] = None, *args, **kwargs):
+        try:
+            self._enrich_kwargs_with_invocation_keys(kwargs)
+            self._log(level, msg, None, keys_to_obfuscate, *args, **kwargs)
+        except Exception:
+            self.exception('logger log exception.')
+
+    def set_log_level(self, level: int) -> None:
+        """
+        Set the logger log level
+        Args:
+            level (int): can be either a numeric value returned from get_log_level_name(),
+            or a level imported from logging library levels (e.g. DEBUG, ERROR etc.)
+        """
+        self._logger.setLevel(level)
+    
+    def _build_code_ref_str(self, code_ref: CodeType) -> str:
+        file_name = code_ref.co_filename.split('/')[-1]
+        return f'{file_name} [Line {code_ref.co_firstlineno}: {code_ref.co_name}]'
+
+    def _log(self, level, msg: str, stack_trace: Optional[str], keys_to_obfuscate: Optional[List], *args, **kwargs) -> None:
+        msg = self._obfuscate(msg, keys_to_obfuscate)
+        if not msg:
+            message = ''
+        elif msg.__class__.__name__ != 'str':
+            message = msg.__str__()
+        else:
+            if len(args) > 0:
+                message = msg.format(*args)
+            else:
+                message = msg
+        self._enrich_kwargs_with_invocation_keys(kwargs)
+        code_ref = sys._getframe(2).f_code  # noqa
+        extra_keys = self._obfuscate(kwargs, keys_to_obfuscate)
+        
+        self.registered_formatter.append_keys(origin_service_name=self.service, origin_func_name=self._build_code_ref_str(code_ref),
+                                                context_info=extra_keys if extra_keys else None, stack_trace=stack_trace)
+        self._logger.log(level, message)
 
 
 def set_package_logger(
