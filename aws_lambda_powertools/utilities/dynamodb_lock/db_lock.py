@@ -17,6 +17,7 @@ from aws_lambda_powertools.logging.logger import Logger
 
 LOGGER = Logger(__name__)
 
+
 class BaseDynamoDBLock:
     """
     Represents a distributed lock - as stored in DynamoDB.
@@ -24,7 +25,17 @@ class BaseDynamoDBLock:
     Typically used within the code to represent a lock held by some other lock-client.
     """
 
-    def __init__(self, partition_key, sort_key, owner_name, lease_duration, record_version_number, expiry_time, additional_attributes, logger: None):
+    def __init__(
+        self,
+        partition_key,
+        sort_key,
+        owner_name,
+        lease_duration,
+        record_version_number,
+        expiry_time,
+        additional_attributes,
+        logger: None,
+    ):
         """
         :param str partition_key: The primary lock identifier
         :param str sort_key: If present, forms a "composite identifier" along with the partition_key
@@ -43,14 +54,14 @@ class BaseDynamoDBLock:
         self.expiry_time = expiry_time
         self.additional_attributes = additional_attributes or {}
         # additional properties
-        self.unique_identifier = quote(partition_key) + '|' + quote(sort_key)
+        self.unique_identifier = quote(partition_key) + "|" + quote(sort_key)
         self.logger = logger if logger else LOGGER
 
     def __str__(self):
         """
         Returns a readable string representation of this instance.
         """
-        return f'{self.__class__.__name__}::{self.__dict__}'
+        return f"{self.__class__.__name__}::{self.__dict__}"
 
 
 class DynamoDBLock(BaseDynamoDBLock):
@@ -58,11 +69,11 @@ class DynamoDBLock(BaseDynamoDBLock):
     Represents a lock that is owned by a local DynamoDBLockClient instance.
     """
 
-    PENDING = 'PENDING'
-    LOCKED = 'LOCKED'
-    RELEASED = 'RELEASED'
-    IN_DANGER = 'IN_DANGER'
-    INVALID = 'INVALID'
+    PENDING = "PENDING"
+    LOCKED = "LOCKED"
+    RELEASED = "RELEASED"
+    IN_DANGER = "IN_DANGER"
+    INVALID = "INVALID"
 
     def __init__(
         self,
@@ -91,9 +102,18 @@ class DynamoDBLock(BaseDynamoDBLock):
         :param DynamoDBLockClient lock_client: The client that "owns" this lock
         :param Logger logger: you can pass logger in order to write logs
         """
-        BaseDynamoDBLock.__init__(self, partition_key, sort_key, owner_name, lease_duration, record_version_number, expiry_time,
-                                  additional_attributes, logger)
-        
+        BaseDynamoDBLock.__init__(
+            self,
+            partition_key,
+            sort_key,
+            owner_name,
+            lease_duration,
+            record_version_number,
+            expiry_time,
+            additional_attributes,
+            logger,
+        )
+
         self.app_callback = app_callback
         self.lock_client = lock_client
         # additional properties
@@ -105,14 +125,14 @@ class DynamoDBLock(BaseDynamoDBLock):
         """
         No-op - returns itself
         """
-        self.logger.debug('entering lock', unique_identifier=self.unique_identifier)
+        self.logger.debug("entering lock", unique_identifier=self.unique_identifier)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         """
         Releases the lock - with best_effort=True
         """
-        self.logger.debug('exiting lock', unique_identifier=self.unique_identifier)
+        self.logger.debug("exiting lock", unique_identifier=self.unique_identifier)
         self.release(best_effort=True)
 
     def release(self, best_effort=True):
@@ -123,5 +143,5 @@ class DynamoDBLock(BaseDynamoDBLock):
                 and the clean up steps will continue, hence the lock item in DynamoDb might not
                 be updated / deleted but will eventually expire. Defaults to True.
         """
-        self.logger.debug('releasing lock', unique_identifier=self.unique_identifier)
+        self.logger.debug("releasing lock", unique_identifier=self.unique_identifier)
         self.lock_client.release_lock(self, best_effort)

@@ -24,9 +24,10 @@ python = "^3.6.2"
 aws-xray-sdk = "^2.8.0"
 fastjsonschema = "^2.14.5"
 boto3 = "^1.18"
-flatten-dict = "*"
 pydantic = {version = "^1.8.2", optional = true }
 email-validator = {version = "*", optional = true }
+flatten-dict = "^0.4.2"
+requests = "*"
 
 [tool.poetry.dev-dependencies]
 # 2022-04-21: jmespath was removed, to be re-added once we drop python 3.6.

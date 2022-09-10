@@ -3,8 +3,8 @@ AWS Service Discovery configuration retrieval and caching utility
 """
 
 
-import os
 import json
+import os
 from typing import Any, Dict, Optional, Union
 from uuid import uuid4
 
@@ -127,10 +127,12 @@ class ServiceDiscoveryProvider(BaseProvider):
 
         # Explicit arguments will take precedence over keyword arguments
 
-        sdk_options['ServiceId'] = name
-        response = self.client.get_instance(ServiceId=sdk_options['ServiceId'], InstanceId=sdk_options['InstanceId'])['Instance']['Attributes']
-        if sdk_options.get('Attribute'):
-            return response.get(sdk_options.get('Attribute'))
+        sdk_options["ServiceId"] = name
+        response = self.client.get_instance(ServiceId=sdk_options["ServiceId"], InstanceId=sdk_options["InstanceId"])[
+            "Instance"
+        ]["Attributes"]
+        if sdk_options.get("Attribute"):
+            return response.get(sdk_options.get("Attribute"))
         else:
             return json.dumps(response)
 
@@ -148,8 +150,8 @@ class ServiceDiscoveryProvider(BaseProvider):
                 ServiceName: The name of the service that you specified when you registered the instance.
 
         """
-        sdk_options['NamespaceName'] = path
-        return self.client.discover_instances(**sdk_options)['Instances']
+        sdk_options["NamespaceName"] = path
+        return self.client.discover_instances(**sdk_options)["Instances"]
 
 
 def get_service_attribute(
@@ -197,7 +199,7 @@ def get_service_attribute(
     """
 
     # Only create the provider if this function is called at least once
-    provider = 'servicediscovery'
+    provider = "servicediscovery"
     if provider not in DEFAULT_PROVIDERS:
         DEFAULT_PROVIDERS[provider] = ServiceDiscoveryProvider()
 

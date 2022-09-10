@@ -1808,7 +1808,6 @@ def test_base_provider_get_force_update(mock_name, mock_value):
     assert value == mock_value
 
 
-
 def test_service_discovery_get_specific_attribute(mock_name, mock_value, mock_version, config):
     """
     Test ServiceDiscoveryProvider.get() with a non-cached value
@@ -1819,22 +1818,14 @@ def test_service_discovery_get_specific_attribute(mock_name, mock_value, mock_ve
 
     # Stub the boto3 client
     stubber = stub.Stubber(provider.client)
-    instance_id = 'random-id'
-    response = {
-    'Instance': {
-        'Id': instance_id,
-        'CreatorRequestId': 'creator-id',
-        'Attributes': {
-            'key': mock_value
-        }
-    }
-}
+    instance_id = "random-id"
+    response = {"Instance": {"Id": instance_id, "CreatorRequestId": "creator-id", "Attributes": {"key": mock_value}}}
     expected_params = {"ServiceId": mock_name, "InstanceId": instance_id}
     stubber.add_response("get_instance", response, expected_params)
     stubber.activate()
 
     try:
-        value = provider.get(mock_name, **{'InstanceId': instance_id, 'Attribute': 'key'})
+        value = provider.get(mock_name, **{"InstanceId": instance_id, "Attribute": "key"})
 
         assert value == mock_value
         stubber.assert_no_pending_responses()
@@ -1852,24 +1843,16 @@ def test_service_discovery_get_all_attributes(mock_name, mock_value, mock_versio
 
     # Stub the boto3 client
     stubber = stub.Stubber(provider.client)
-    instance_id = 'random-id'
-    response = {
-    'Instance': {
-        'Id': instance_id,
-        'CreatorRequestId': 'creator-id',
-            'Attributes': {
-                'key': mock_value
-            }
-        }
-    }
+    instance_id = "random-id"
+    response = {"Instance": {"Id": instance_id, "CreatorRequestId": "creator-id", "Attributes": {"key": mock_value}}}
     expected_params = {"ServiceId": mock_name, "InstanceId": instance_id}
     stubber.add_response("get_instance", response, expected_params)
     stubber.activate()
 
     try:
-        value = provider.get(mock_name, **{'InstanceId': instance_id})
+        value = provider.get(mock_name, **{"InstanceId": instance_id})
 
-        assert value == json.dumps(response['Instance']['Attributes'])
+        assert value == json.dumps(response["Instance"]["Attributes"])
         stubber.assert_no_pending_responses()
     finally:
         stubber.deactivate()
@@ -1885,25 +1868,17 @@ def test_ssm_provider_get_sdk_options_overwrite(mock_name, mock_value, mock_vers
 
     # Stub the boto3 client
     stubber = stub.Stubber(provider.client)
-    instance_id = 'random-id'
-    response = {
-    'Instance': {
-        'Id': instance_id,
-        'CreatorRequestId': 'creator-id',
-            'Attributes': {
-                'key': mock_value
-            }
-        }
-    }
-    
+    instance_id = "random-id"
+    response = {"Instance": {"Id": instance_id, "CreatorRequestId": "creator-id", "Attributes": {"key": mock_value}}}
+
     expected_params = {"ServiceId": mock_name, "InstanceId": instance_id}
     stubber.add_response("get_instance", response, expected_params)
     stubber.activate()
 
     try:
-        value = provider.get(mock_name, Name="THIS_SHOULD_BE_OVERWRITTEN", **{'InstanceId': instance_id})
+        value = provider.get(mock_name, Name="THIS_SHOULD_BE_OVERWRITTEN", **{"InstanceId": instance_id})
 
-        assert value == json.dumps(response['Instance']['Attributes'])
+        assert value == json.dumps(response["Instance"]["Attributes"])
         stubber.assert_no_pending_responses()
     finally:
         stubber.deactivate()
@@ -1920,30 +1895,26 @@ def test_service_discovery_provider_get_multiple(mock_name, mock_value, mock_ver
     provider = parameters.ServiceDiscoveryProvider(config=config)
     # Stub the boto3 client
     stubber = stub.Stubber(provider.client)
-    service_name = 'requested-service-name'
+    service_name = "requested-service-name"
     response = {
         "Instances": [
             {
-                'InstanceId': 'instance-id',
-                'NamespaceName': mock_name,
-                'ServiceName': service_name,
-                'HealthStatus': 'UNKNOWN',
-                'Attributes': {
-                    'user': name,
-                    'value': f'{name}{name}',
-                    'version': 'mock_version'
-                }
+                "InstanceId": "instance-id",
+                "NamespaceName": mock_name,
+                "ServiceName": service_name,
+                "HealthStatus": "UNKNOWN",
+                "Attributes": {"user": name, "value": f"{name}{name}", "version": "mock_version"},
             }
             for name in mock_param_names
         ]
     }
-    
+
     expected_params = {"NamespaceName": mock_name, "ServiceName": service_name}
     stubber.add_response("discover_instances", response, expected_params)
     stubber.activate()
 
     try:
-        values = provider.get_multiple(mock_name, **{'ServiceName': service_name})
+        values = provider.get_multiple(mock_name, **{"ServiceName": service_name})
 
         stubber.assert_no_pending_responses()
 

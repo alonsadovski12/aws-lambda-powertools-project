@@ -1,7 +1,7 @@
 import json
-from datetime import datetime, timedelta
-from typing import Callable, List, Optional
 from decimal import Decimal
+from typing import Callable, List, Optional
+
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -12,63 +12,65 @@ from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_exceptions 
 from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_monitor import CircuitBreakerMonitor
 from aws_lambda_powertools.utilities.circuit_breaker.schemas.circuit_breaker_schema import CircuitBreakerDynamoDBSchema
 
-
-
 logger = Logger(__name__)
+
 
 class DynamoDBCircuitBreaker(BaseCircuitBreaker):
     """
-        Provides implementation of CircuitBreaker design pattern, and stores the circuit breaker in DynamoDB in case other
-        services will want to get circuit breaker status from central place and also update theirs status.
+    Provides implementation of CircuitBreaker design pattern, and stores the circuit breaker in DynamoDB in case other
+    services will want to get circuit breaker status from central place and also update theirs status.
 
-        Parameters:
-            name: str
-                CircuitBreaker name
-            table_name: str
-                The DynamoDB table to store the CircuitBreaker state
-            config: Optional[Config]
-                Configuration to initialize the DynamoDB boto client. defaults: None
-            boto3_session: Optional[boto3.session.Session]
-                Whether you already have boto sessions. defaults: None
-            failure_threshold: int
-                How many failures needs to occur before opening the CircuitBreaker. defaults: 5
-            recovery_timeout: int
-                How much time must be pass after opening the circuit breaker until sending the next request. default: 30
-            expected_exception: List[Exception]
-                Which exceptions are okay to get when running the business logic, those exception will be caught and treat
-                as the business logic finished successfully. defaults: None
-            fallback_function: Callable
-                Called when the circuit is opened. defaults: None
-            monitor: CircuitBreakerMonitor
-                Circuit Breaker monitor class. defaults = CircuitBreakerMonitor(),
-            logger: Logger
-                The logger which will write logs from this object. Defaults: aws_lambda_powertools.logging.logger
-        Example
-        -----------
-        def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:  #pylint: disable=unused-argument
-            remote_call()
+    Parameters:
+        name: str
+            CircuitBreaker name
+        table_name: str
+            The DynamoDB table to store the CircuitBreaker state
+        config: Optional[Config]
+            Configuration to initialize the DynamoDB boto client. defaults: None
+        boto3_session: Optional[boto3.session.Session]
+            Whether you already have boto sessions. defaults: None
+        failure_threshold: int
+            How many failures needs to occur before opening the CircuitBreaker. defaults: 5
+        recovery_timeout: int
+            How much time must be pass after opening the circuit breaker until sending the next request. default: 30
+        expected_exception: List[Exception]
+            Which exceptions are okay to get when running the business logic, those exception will be caught and treat
+            as the business logic finished successfully. defaults: None
+        fallback_function: Callable
+            Called when the circuit is opened. defaults: None
+        monitor: CircuitBreakerMonitor
+            Circuit Breaker monitor class. defaults = CircuitBreakerMonitor(),
+        logger: Logger
+            The logger which will write logs from this object. Defaults: aws_lambda_powertools.logging.logger
+    Example
+    -----------
+    def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:  #pylint: disable=unused-argument
+        remote_call()
 
-        @DynamoDBCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME, table_name=os.environ.get('TABLE_NAME'))
-        def remote_call():
-            http = urllib3.PoolManager()
+    @DynamoDBCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME, table_name=os.environ.get('TABLE_NAME'))
+    def remote_call():
+        http = urllib3.PoolManager()
 
-            url = os.environ.get('URL') + '/api/hello'
-            resp = http.request('GET', url)
-            print(f'responded with status: {resp.status}')
-            if resp.status != 200:
-                raise ValueError('connection error')
-        """
-    def __init__(self,
-                 name: str,
-                 table_name: str,
-                 config: Optional[Config] = None,
-                 boto3_session: Optional[boto3.session.Session] = None,
-                 failure_threshold: int = None,
-                 recovery_timeout: int = None,
-                 expected_exception: List[Exception] = None,
-                 fallback_function: Callable = None,
-                 monitor: CircuitBreakerMonitor = CircuitBreakerMonitor(),
-                 logger: Logger = logger):
+        url = os.environ.get('URL') + '/api/hello'
+        resp = http.request('GET', url)
+        print(f'responded with status: {resp.status}')
+        if resp.status != 200:
+            raise ValueError('connection error')
+    """
+
+    def __init__(
+        self,
+        name: str,
+        table_name: str,
+        config: Optional[Config] = None,
+        boto3_session: Optional[boto3.session.Session] = None,
+        failure_threshold: Optional[int] = None,
+        recovery_timeout: Optional[int] = None,
+        expected_exception: List[Exception] = [],
+        fallback_function: Optional[Callable] = None,
+        monitor: CircuitBreakerMonitor = CircuitBreakerMonitor(),
+        logger: Logger = logger,
+    ):
         super().__init__(name, failure_threshold, recovery_timeout, expected_exception, fallback_function, monitor)
         self.logger = logger
 
@@ -89,7 +91,6 @@ class DynamoDBCircuitBreaker(BaseCircuitBreaker):
             return circuit_breaker_item.cb_state
         self.logger.info(f"The state is: {circuit_breaker_item.cb_state}")
         return circuit_breaker_item.cb_state
-
 
     @property
     def open_remaining(self):
@@ -131,24 +132,25 @@ class DynamoDBCircuitBreaker(BaseCircuitBreaker):
     @property
     def fallback_function(self):
         return self._fallback_function
-    
+
     def _check_remaining(self, circuit_breaker_obj: CircuitBreakerDynamoDBSchema) -> int:
         remain = (circuit_breaker_obj.opened + circuit_breaker_obj.recovery_timeout) - self.current_milli_time()
         self.logger.info(f"Remaining milliseconds until switch to half-open {remain}")
         return remain
 
-
-
-    def _get_empty_dynamo_entry(self)-> CircuitBreakerDynamoDBSchema: 
-        return CircuitBreakerDynamoDBSchema(**{'name': self.name,
-                                     'cb_state':State.CLOSED.value,
-                                     'opened': self._opened,
-                                     'expected_exception':str(self._expected_exception),
-                                     'failure_count':self._failure_count,
-                                     'last_failure':'',
-                                     'failure_threshold':self._failure_threshold,
-                                     'recovery_timeout':self._recovery_timeout_in_milli})
-
+    def _get_empty_dynamo_entry(self) -> CircuitBreakerDynamoDBSchema:
+        return CircuitBreakerDynamoDBSchema(
+            **{
+                "name": self.name,
+                "cb_state": State.CLOSED.value,
+                "opened": self._opened,
+                "expected_exception": str(self._expected_exception),
+                "failure_count": self._failure_count,
+                "last_failure": "",
+                "failure_threshold": self._failure_threshold,
+                "recovery_timeout": self._recovery_timeout_in_milli,
+            }
+        )
 
     def _call_succeeded(self):
         """
@@ -157,7 +159,7 @@ class DynamoDBCircuitBreaker(BaseCircuitBreaker):
         self.logger.info("The requested call succeeded, state is: closed")
         circuit_breaker_item: CircuitBreakerDynamoDBSchema = self._get_state_from_remote()
         circuit_breaker_item.cb_state = State.CLOSED.value
-        circuit_breaker_item.last_failure = ''
+        circuit_breaker_item.last_failure = ""
         circuit_breaker_item.failure_count = 0
         self._update_circuit_breaker_item_in_table(circuit_breaker_item)
 
@@ -169,32 +171,34 @@ class DynamoDBCircuitBreaker(BaseCircuitBreaker):
         circuit_breaker_item: CircuitBreakerDynamoDBSchema = self._get_state_from_remote()
         circuit_breaker_item.failure_count += 1
         if circuit_breaker_item.failure_count >= circuit_breaker_item.failure_threshold:
-            self.logger.warning(f'Failure count is above the threshold {circuit_breaker_item.failure_threshold}. moving state to open')
+            self.logger.warning(
+                f"Failure count is above the threshold {circuit_breaker_item.failure_threshold}. moving state to open"
+            )
             circuit_breaker_item.cb_state = State.OPEN.value
             circuit_breaker_item.opened = self.current_milli_time()
-        
+
         self._update_circuit_breaker_item_in_table(circuit_breaker_item)
-    
+
     def _init_cb_item_in_dynamodb(self):
         try:
             self.logger.info("retrieving circuit breaker object from dynamoDB")
-            entry_item = self.table.get_item(Key={'name':self.name}).get('Item')
+            entry_item = self.table.get_item(Key={"name": self.name}).get("Item")
             if entry_item is None:
-                self.logger.info('circuit breaker does not exist in dynamodb table, putting an empty item in dynamodb')
+                self.logger.info("circuit breaker does not exist in dynamodb table, putting an empty item in dynamodb")
                 self._put_circuit_breaker_item_in_table(self._get_empty_dynamo_entry())
             else:
                 return CircuitBreakerDynamoDBSchema(**entry_item)
         except ClientError:
-            self.logger.exception('circuit breaker does not exist in dynamodb table')
+            self.logger.exception("circuit breaker does not exist in dynamodb table")
             self._put_circuit_breaker_item_in_table(self._get_empty_dynamo_entry())
 
     def _get_state_from_remote(self) -> CircuitBreakerDynamoDBSchema:
         """
-            Get the CircuitBreaker entry from the remote table
+        Get the CircuitBreaker entry from the remote table
         """
         try:
             self.logger.info("retrieving circuit breaker object from dynamoDB")
-            entry_item = self.table.get_item(Key={'name':self.name}).get('Item')
+            entry_item = self.table.get_item(Key={"name": self.name}).get("Item")
             self.logger.info(str(entry_item))
             return CircuitBreakerDynamoDBSchema(**entry_item)
         except ClientError:
@@ -208,41 +212,48 @@ class DynamoDBCircuitBreaker(BaseCircuitBreaker):
         try:
             self.logger.info("Putting circuit breaker item in dynamoDB")
             obj = circuit_breaker_obj.dict()
-            ddb_data = json.loads(json.dumps(obj), parse_float=Decimal) # to parse float to decimal
+            ddb_data = json.loads(json.dumps(obj), parse_float=Decimal)  # to parse float to decimal
             self.table.put_item(Item=ddb_data)
         except self.table.meta.client.exceptions.ConditionalCheckFailedException:
             error_message = "Failed to put record for already existing"
             self.logger.exception(error_message)
             raise CircuitBreakerException(error_message)
-    
+
     def _update_circuit_breaker_item_in_table(self, circuit_breaker_obj: CircuitBreakerDynamoDBSchema):
         self.logger.info("updating circuit breaker item in dynamodb")
-        update_expression = 'SET cb_state=:cb_state, opened=:cb_opened, failure_count=:cb_failure_count, last_failure=:cb_last_failure'
-        expression_attribute_values = { ':cb_state': circuit_breaker_obj.cb_state,
-                                        ':cb_opened': circuit_breaker_obj.opened,
-                                        ':cb_failure_count': circuit_breaker_obj.failure_count,
-                                        ':cb_last_failure': str(self._last_failure)}
+        update_expression = (
+            "SET cb_state=:cb_state, opened=:cb_opened, failure_count=:cb_failure_count, last_failure=:cb_last_failure"
+        )
+        expression_attribute_values = {
+            ":cb_state": circuit_breaker_obj.cb_state,
+            ":cb_opened": circuit_breaker_obj.opened,
+            ":cb_failure_count": circuit_breaker_obj.failure_count,
+            ":cb_last_failure": str(self._last_failure),
+        }
         try:
             self.table.update_item(
-                Key={'name': circuit_breaker_obj.name,},
+                Key={
+                    "name": circuit_breaker_obj.name,
+                },
                 UpdateExpression=update_expression,
                 ExpressionAttributeValues=expression_attribute_values,
-                ReturnValues='UPDATED_OLD',
+                ReturnValues="UPDATED_OLD",
             )
 
-        except ClientError as ex: #TODO: change to specific exception
+        except ClientError as ex:  # TODO: change to specific exception
             error_message = "Failed to update record in dynamoDB"
             self.logger.exception(error_message)
             raise CircuitBreakerException(error_message)
 
 
-
-def circuit(failure_threshold=None,
-            recovery_timeout=None,
-            expected_exception=None,
-            name=None,
-            fallback_function=None,
-            cls=DynamoDBCircuitBreaker):
+def circuit(
+    failure_threshold=None,
+    recovery_timeout=None,
+    expected_exception=None,
+    name=None,
+    fallback_function=None,
+    cls=DynamoDBCircuitBreaker,
+):
     # if the decorator is used without parameters, the
     # wrapped function is provided as first argument
     if callable(failure_threshold):
@@ -253,4 +264,5 @@ def circuit(failure_threshold=None,
             recovery_timeout=recovery_timeout,
             expected_exception=expected_exception,
             name=name,
-            fallback_function=fallback_function)
+            fallback_function=fallback_function,
+        )

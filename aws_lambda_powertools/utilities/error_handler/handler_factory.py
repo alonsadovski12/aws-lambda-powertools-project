@@ -1,17 +1,19 @@
-from aws_lambda_powertools.utilities.typing import LambdaContext
+from typing import Dict
+
 from aws_lambda_powertools.utilities.error_handler.constants import ErrorDestinationEnum
 from aws_lambda_powertools.utilities.error_handler.error_destination_interface import ErrorDestinationInterface
 from aws_lambda_powertools.utilities.error_handler.exception import ErrorHandlerException
 from aws_lambda_powertools.utilities.error_handler.exception_destination import ExceptionDestination
 from aws_lambda_powertools.utilities.error_handler.http_response import HttpResponse
 from aws_lambda_powertools.utilities.error_handler.sqs_destination import SqsDestination
+from aws_lambda_powertools.utilities.typing import LambdaContext
 
-#pylint: disable=too-many-arguments
 
 
 class Singleton(type):
     """Singleton enforcer. Can be extracted if additional classes need to be singletons."""
-    _instances = {}
+
+    _instances: Dict = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
@@ -20,7 +22,6 @@ class Singleton(type):
 
 
 class ErrorHandlerFactory(metaclass=Singleton):
-
     def __init__(self):
         self._error_handlers = {}
         # this can be extracted to error_handler for lazy-registration in the future
@@ -49,8 +50,9 @@ class ErrorHandlerFactory(metaclass=Singleton):
         """
         self._register_handler(ErrorDestinationEnum.CUSTOM, handler_class)
 
-    def get_handler(self, handler_type: ErrorDestinationEnum, logger: object, exc: Exception, context: LambdaContext,
-                    trace: str) -> ErrorDestinationInterface:
+    def get_handler(
+        self, handler_type: ErrorDestinationEnum, logger: object, exc: Exception, context: LambdaContext, trace: str
+    ) -> ErrorDestinationInterface:
         """
         Args:
             context: current Lambda context. Will be passed to the handler IMPL.
@@ -67,7 +69,7 @@ class ErrorHandlerFactory(metaclass=Singleton):
         """
         handler_class = self._error_handlers.get(handler_type)
         if handler_class is None:
-            raise ErrorHandlerException(f'{handler_type} is not a valid error handler type')
+            raise ErrorHandlerException(f"{handler_type} is not a valid error handler type")
         if logger is None or exc is None:
-            raise ErrorHandlerException('logger and/or exception are None')
+            raise ErrorHandlerException("logger and/or exception are None")
         return handler_class(logger=logger, exception=exc, lambda_context=context, trace=trace)

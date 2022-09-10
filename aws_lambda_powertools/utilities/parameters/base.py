@@ -176,7 +176,7 @@ class BaseProvider(ABC):
         Retrieve multiple parameter values from the underlying parameter store
         """
         raise NotImplementedError()
-    
+
     def flush_cache_keys(self, keys_to_flush: List[str], transform: Optional[str] = None) -> None:
         for key in keys_to_flush:
             store_key = (key, transform)
