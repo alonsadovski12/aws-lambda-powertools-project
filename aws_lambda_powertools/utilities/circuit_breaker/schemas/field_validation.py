@@ -19,8 +19,8 @@ class FieldValidationClass:
     """
 
     def __init__(self, **kwargs):
-        fields = set(f.name for f in dataclasses.fields(self))
-        mandatory_fields = set(f.name for f in dataclasses.fields(self) if not self._is_optional(f.type))
+        fields = set(f.name for f in dataclasses.fields(self))  # noqa: C401
+        mandatory_fields = set(f.name for f in dataclasses.fields(self) if not self._is_optional(f.type))  # noqa: C401
         # This tests that there are no missing fields in kwargs. extra, unparsed fields are ok
         self._check_mandatory_fields(mandatory_fields, **kwargs)
         for key, value in kwargs.items():

@@ -15,5 +15,5 @@ class CircuitBreakerDynamoDBSchema(FieldValidationClass):
     recovery_timeout: int
     expected_exception: str  # List[Exception]
 
-    def dict(self) -> Dict:
+    def dict(self) -> Dict:  # noqa: A003
         return asdict(self)

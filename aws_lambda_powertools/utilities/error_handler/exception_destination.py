@@ -1,7 +1,8 @@
 # pylint: disable=no-name-in-module,unused-argument,useless-super-delegation
 import json
+from logging import Logger
 from typing import Any
-from  logging import Logger
+
 from aws_lambda_powertools.utilities.error_handler.constants import DEFAULT_ERROR_MESSAGE
 from aws_lambda_powertools.utilities.error_handler.error_destination_interface import ErrorDestinationInterface
 from aws_lambda_powertools.utilities.error_handler.exception import ErrorHandlerException
@@ -9,7 +10,9 @@ from aws_lambda_powertools.utilities.typing import LambdaContext
 
 
 class ExceptionDestination(ErrorDestinationInterface):
-    """This destination will log the unhandled exception and raise ErrorHandlerException that contains the exception details"""
+    """This destination will log the unhandled exception and raise ErrorHandlerException
+    that contains the exception details
+    """
 
     def __init__(
         self,

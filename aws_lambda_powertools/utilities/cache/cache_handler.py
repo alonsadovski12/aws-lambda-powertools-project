@@ -26,7 +26,9 @@ class HTTPCacheHandler:
         self.table = session.resource("dynamodb").Table(dynamodb_table)
 
     # check result from remote cache and add to cache if changed
-    def get_result(self, url: str, method: str = "GET", headers: Optional[Dict] = None, body: Optional[Dict] = None) -> str:
+    def get_result(
+        self, url: str, method: str = "GET", headers: Optional[Dict] = None, body: Optional[Dict] = None
+    ) -> str:
         cache_result = self._get_item(url, method)
 
         # if item exists in cache

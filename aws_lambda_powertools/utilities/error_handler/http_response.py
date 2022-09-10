@@ -13,7 +13,8 @@ class HttpResponse(ErrorDestinationInterface):
     def send_error_to_destination(self) -> Any:
         original_error: str = json.dumps(self._build_error_message())
         self._logger.error(
-            f"{DEFAULT_ERROR_MESSAGE}. returning HTTP response, status_code={HTTPStatus.INTERNAL_SERVER_ERROR}, original_error={original_error}"
+            f"{DEFAULT_ERROR_MESSAGE}. returning HTTP response, status_code={HTTPStatus.INTERNAL_SERVER_ERROR},"
+            f" original_error={original_error}"
         )
         return {
             "statusCode": HTTPStatus.INTERNAL_SERVER_ERROR,

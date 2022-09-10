@@ -1,8 +1,8 @@
 # pylint: disable=no-name-in-module,unused-argument,line-too-long
 import json
 import os
-from typing import Any
 from logging import Logger
+from typing import Any
 
 import boto3
 
@@ -31,7 +31,8 @@ class SqsDestination(ErrorDestinationInterface):
     def send_error_to_destination(self) -> Any:
         original_error = self._build_error_message()
         self._logger.error(
-            f"{DEFAULT_ERROR_MESSAGE}. sending unhandled exception to SQS, destination={self.sqs_url}, original_error={original_error}"
+            f"{DEFAULT_ERROR_MESSAGE}. sending unhandled exception to SQS, destination={self.sqs_url}, "
+            f"original_error={original_error}"
         )
         try:
             client = boto3.client("sqs")

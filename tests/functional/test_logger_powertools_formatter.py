@@ -1,5 +1,4 @@
 """aws_lambda_logging tests."""
-import ast
 import io
 import json
 import random

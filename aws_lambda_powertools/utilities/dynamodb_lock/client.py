@@ -224,7 +224,7 @@ class DynamoDBLockClient:
 
             avg_loop_time = self._heartbeat_period.total_seconds() / len(locks) if locks else -1.0
             loop_index = 1
-            for uid, lock in locks.items():
+            for _uid, lock in locks.items():
                 self._send_heartbeat_and_sleep(lock, loop_index, start_time, avg_loop_time)
                 loop_index += 1
 
@@ -295,7 +295,7 @@ class DynamoDBLockClient:
             start_time = time.monotonic()
             locks = self._locks.copy()
 
-            for uid, lock in locks.items():
+            for _uid, lock in locks.items():
                 self._check_heartbeat(lock)
 
             self.logger.info("finished the check_heartbeat loop")
@@ -401,7 +401,7 @@ class DynamoDBLockClient:
         a periodic basis. In that case, a few different things can happen:
 
         1) The other client releases the lock
-        2) The other client dies, we will wait until the lock passed his expiry_time and we will try to acquire the lock.
+        2) The other client dies, we will wait until the lock passed his expiry_time and we will try to acquire the lock
         3) This client goes over the max-retry-timeout-period
             the client failed to acquire the lock in the given time
         4) Race-condition amongst multiple lock-clients waiting to acquire released lock
@@ -411,7 +411,8 @@ class DynamoDBLockClient:
         :param datetime.timedelta retry_period: If the lock is not immediately available, how long
                 should we wait between retries? Defaults to heartbeat_period.
         :param datetime.timedelta retry_timeout: If the lock is not available for an extended period,
-                how long should we keep trying before giving up and timing out? Defaults to lease_duration + heartbeat_period.
+                how long should we keep trying before giving up and timing out?
+                Defaults to lease_duration + heartbeat_period.
         :param dict additional_attributes: Arbitrary application metadata to be stored with the lock
         :param Callable app_callback: Callback function that can be used to notify the app of lock got an error
 
@@ -734,10 +735,9 @@ class DynamoDBLockClient:
         Iterates over all the locks and releases each one.
         """
         self.logger.info("releasing all locks", locks=len(self._locks))
-        for uid, lock in self._locks.copy().items():
+        for _uid, lock in self._locks.copy().items():
             self.release_lock(lock, best_effort=True)
-            # TODO: should we fire app-callback to indicate the force-release
-            # self._call_app_callback(lock, DynamoDBLockError.LOCK_STOLEN)
+            self._call_app_callback(lock, DynamoDBLockError.LOCK_STOLEN)
 
     def close(self, release_locks=False):
         """

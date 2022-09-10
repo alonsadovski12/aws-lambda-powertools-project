@@ -2,8 +2,8 @@
 import traceback
 from typing import Any, Callable, Dict, Optional
 
+from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.middleware_factory import lambda_handler_decorator
-from  aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.error_handler.constants import ErrorDestinationEnum
 from aws_lambda_powertools.utilities.error_handler.exception import ErrorHandlerException
 from aws_lambda_powertools.utilities.error_handler.handler_factory import ErrorHandlerFactory
@@ -35,7 +35,8 @@ def error_handler(
     """This utility is used for catching unhandled exceptions that your handler code has missed
         and allows to gracefully handle them.
         Error Handler utility offers several handlers, each one will handle your failure differently.
-        Each handler logs the exception and adds the following metadata: exception message, traceback, lambda name and AWS request ID.
+        Each handler logs the exception and adds the following metadata: exception message, traceback,
+        lambda name and AWS request ID.
 
     Parameters:
         handler (Callable): lambda handler

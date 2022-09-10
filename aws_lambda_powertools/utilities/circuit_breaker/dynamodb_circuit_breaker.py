@@ -47,7 +47,8 @@ class DynamoDBCircuitBreaker(BaseCircuitBreaker):
     def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:  #pylint: disable=unused-argument
         remote_call()
 
-    @DynamoDBCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME, table_name=os.environ.get('TABLE_NAME'))
+    @DynamoDBCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME,
+        table_name=os.environ.get('TABLE_NAME'))
     def remote_call():
         http = urllib3.PoolManager()
 
@@ -66,9 +67,9 @@ class DynamoDBCircuitBreaker(BaseCircuitBreaker):
         boto3_session: Optional[boto3.session.Session] = None,
         failure_threshold: Optional[int] = None,
         recovery_timeout: Optional[int] = None,
-        expected_exception: List[Exception] = [],
+        expected_exception: Optional[List[Exception]] = None,
         fallback_function: Optional[Callable] = None,
-        monitor: CircuitBreakerMonitor = CircuitBreakerMonitor(),
+        monitor: Optional[CircuitBreakerMonitor] = None,
         logger: Logger = logger,
     ):
         super().__init__(name, failure_threshold, recovery_timeout, expected_exception, fallback_function, monitor)
@@ -240,7 +241,7 @@ class DynamoDBCircuitBreaker(BaseCircuitBreaker):
                 ReturnValues="UPDATED_OLD",
             )
 
-        except ClientError as ex:  # TODO: change to specific exception
+        except ClientError:
             error_message = "Failed to update record in dynamoDB"
             self.logger.exception(error_message)
             raise CircuitBreakerException(error_message)

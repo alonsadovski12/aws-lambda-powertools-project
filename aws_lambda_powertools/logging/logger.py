@@ -582,7 +582,9 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
         file_name = code_ref.co_filename.split("/")[-1]
         return f"{file_name} [Line {code_ref.co_firstlineno}: {code_ref.co_name}]"
 
-    def _log(self, level, msg: str, stack_trace: Optional[str], keys_to_obfuscate: Optional[List], *args, **kwargs) -> None:  # type: ignore
+    def _log(  # type: ignore[override]
+        self, level, msg: str, stack_trace: Optional[str], keys_to_obfuscate: Optional[List], *args, **kwargs
+    ) -> None:
         msg = self._obfuscate(msg, keys_to_obfuscate)  # type: ignore
         if not msg:
             message = ""
