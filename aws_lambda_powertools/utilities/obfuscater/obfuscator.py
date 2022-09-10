@@ -4,6 +4,33 @@ from flatten_dict import flatten, unflatten
 
 
 class Obfuscator:
+    """Creates and setups an obfuscator to mask chosen keys in objects.
+        The client can choose the keys he wants to mask and the masking algorithm
+        (the client can use reversible method like encrypt the object with KMS)
+
+        Parameters
+        ----------
+        filtering_mode : FilterModes, optional
+           filter mode which determine to mask white list or black list the keys. Default: FilterModes.BlackList
+        obfuscation_method : Callable, optional
+            an injection point, lets the client choose his masking algorithm. Default: Replace values with ***
+
+        Examples
+        ----------
+        Example 1:
+        obfuscater = Obfuscator(FilterModes.BlackList)
+        obfuscated_object = obfuscater.obfuscate(INPUT_DICT, ['name', 'email'])
+        print(obfuscated_object)
+        {'id': 111, 'name': '***********', 'email': '*********************', 'location': {'country': 'israel', 'city': 'Tel Aviv'}}
+
+        Example 2:
+        obfuscater = Obfuscator(FilterModes.BlackList, md5)
+        obfuscated_object = obfuscater.obfuscate(INPUT_DICT, ['name', 'email'])
+        print(obfuscated_object)
+        {'id': 111, 'name': '3b2d3431cdc2dc59422eaba64c88393c', 'email': 'adbdfce40472f27324522a8e1bf40b24', 'location': {'country': 'israel', 'city': 'Tel Aviv'}}
+
+
+    """
     def __init__(self, filtering_mode: FilterModes = None, obfuscation_method: Callable = None) -> None:
         self.filtering_mode = filtering_mode if filtering_mode else FilterModes.BlackList
         self.obfuscation_method = obfuscation_method if obfuscation_method else Obfuscator.mask

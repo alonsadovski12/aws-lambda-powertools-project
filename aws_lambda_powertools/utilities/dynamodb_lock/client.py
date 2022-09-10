@@ -31,6 +31,65 @@ LOGGER = Logger(__name__)
 class DynamoDBLockClient:
     """
     Provides distributed locks using DynamoDB's support for conditional reads/writes.
+
+    Parameters:
+        dynamodb_resource: boto3.ServiceResource
+            boto3 dynamodb resource client
+        owner_name: str
+            owner name to set to the lock item, should be unique to allow attribution
+        table_name: str
+            the dynamoDB table name
+        partition_key_name: str
+            partition key name
+        sort_key_name: str
+            sort key name
+        ttl_attribute_name: str
+            the column name of the ttl in the DynamoDB table. defaults to 'expiry_time'
+        heartbeat_period: datetime.timedelta
+            How often to update DynamoDB to note that the instance is still running.
+            It is recommended to make this at least 4 times smaller (in order to work correctly in the safe period)
+            than the leaseDuration. defaults to 5 seconds.
+        safe_period: datetime.timedelta
+            How long is it okay to go without a heartbeat before considering a lock to be in "danger".
+            Defaults to 20 seconds.
+        lease_duration: datetime.timedelta
+            The length of time that the lease for the lock will be granted for.
+            i.e. if there is no heartbeat for this period of time, then the lock will be considered as expired.
+            Defaults to 30 seconds.
+        expiry_period: datetime.timedelta
+            The fallback expiry timestamp to allow DynamoDB to clean up old locks after a server crash.
+            This value should be significantly larger than the _lease_duration to ensure that clock-skew etc.
+            are not an issue. Defaults to 1 hour.
+        app_callback_executor: ThreadPoolExecutor
+            The executor to be used for invoking the app_callbacks in case of un-expected errors.
+            Defaults to a ThreadPoolExecutor with a maximum of 5 threads.
+        logger: Logger
+            The logger which will write logs from this object. Defaults: aws_lambda_powertools.logging.logger
+
+    Example
+    -----------
+    def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:  #pylint: disable=unused-argument
+    lock_client = DynamoDBLockClient(
+        boto3.resource('dynamodb'),
+        owner_name=f'{context.function_name}-{context.aws_request_id}',
+        table_name=os.environ.get('LOCK_TABLE_NAME'),
+        partition_key_name='name',
+        sort_key_name='-',
+        lease_duration=datetime.timedelta(seconds=20),
+        heartbeat_period=datetime.timedelta(seconds=4),
+    )
+
+    lock = None
+    try:
+        lock = lock_client.acquire_lock(partition_key='alon', sort_key='-')
+        do_something()
+    except DynamoDBLockError as ex:
+        print('dynamodb lock error', str(ex))
+        raise InterruptedError() from ex
+    finally:
+        if lock:
+            lock.release()
+        lock_client.close()
     """
 
     # default values for class properties

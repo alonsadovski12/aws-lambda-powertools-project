@@ -11,6 +11,40 @@ logger = Logger(__name__)
 
 
 class InMemoryCircuitBreaker(BaseCircuitBreaker):
+    """
+        Provides implementation of CircuitBreaker design pattern, and stores the circuit breaker in local memory
+
+        Parameters:
+            name: str
+                CircuitBreaker name
+            failure_threshold: int
+                How many failures needs to occur before opening the CircuitBreaker. defaults: 5
+            recovery_timeout: int
+                How much time must be pass after opening the circuit breaker until sending the next request. default: 30
+            expected_exception: List[Exception]
+                Which exceptions are okay to get when running the business logic, those exception will be caught and treat
+                as the business logic finished successfully. defaults: None
+            fallback_function: Callable
+                Called when the circuit is opened. defaults: None
+            monitor: CircuitBreakerMonitor
+                Circuit Breaker monitor class. defaults = CircuitBreakerMonitor(),
+            logger: Logger
+                The logger which will write logs from this object. Defaults: aws_lambda_powertools.logging.logger
+        Example
+        -----------
+        def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:  #pylint: disable=unused-argument
+            remote_call()
+
+        @InMemoryCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME)
+        def remote_call():
+            http = urllib3.PoolManager()
+
+            url = os.environ.get('URL') + '/api/hello'
+            resp = http.request('GET', url)
+            print(f'responded with status: {resp.status}')
+            if resp.status != 200:
+                raise ValueError('connection error')
+        """
     def __init__(self,
                  name: str,
                  failure_threshold: int = None,

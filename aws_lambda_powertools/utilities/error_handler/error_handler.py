@@ -33,7 +33,7 @@ def error_handler(
         Error Handler utility offers several handlers, each one will handle your failure differently.
         Each handler logs the exception and adds the following metadata: exception message, traceback, lambda name and AWS request ID.
 
-    Args:
+    Parameters:
         handler (Callable): lambda handler
         event (Dict[str, Any]): lambda event
         context (LambdaContext): lambda context
