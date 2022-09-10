@@ -145,7 +145,10 @@ def test_log_dict_key_seq(stdout, service_name):
     log_dict: dict = json.loads(stdout.getvalue())
 
     # THEN the beginning key sequence must be `level,location,message,timestamp`
-    assert ",".join(list(log_dict.keys())) == "level,message,timestamp,service,origin_service_name,origin_func_name,context_info"
+    assert (
+        ",".join(list(log_dict.keys()))
+        == "level,message,timestamp,service,origin_service_name,origin_func_name,context_info"
+    )
 
 
 def test_log_dict_key_custom_seq(stdout, service_name):
@@ -159,6 +162,7 @@ def test_log_dict_key_custom_seq(stdout, service_name):
 
     # THEN the first key should be "message"
     assert list(log_dict.keys())[0] == "message"
+
 
 def test_log_dict_xray_is_present_when_tracing_is_enabled(stdout, monkeypatch, service_name):
     # GIVEN a logger is initialized within a Lambda function with X-Ray enabled

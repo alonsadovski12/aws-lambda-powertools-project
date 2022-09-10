@@ -1259,6 +1259,7 @@ def test_event_source_compatibility():
     result = handler(load_event("apiGatewayProxyV2Event.json"), None)
     assert result["statusCode"] == 200
 
+
 def test_api_gateway_http_cookie():
     # GIVEN
     app = APIGatewayHttpResolver()

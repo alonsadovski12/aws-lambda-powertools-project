@@ -4,14 +4,14 @@ class DynamoDBLockError(Exception):
     """
 
     # code-constants
-    CLIENT_SHUTDOWN = 'CLIENT_SHUTDOWN'
-    ACQUIRE_TIMEOUT = 'ACQUIRE_TIMEOUT'
-    LOCK_NOT_OWNED = 'LOCK_NOT_OWNED'
-    LOCK_STOLEN = 'LOCK_STOLEN'
-    LOCK_IN_DANGER = 'LOCK_IN_DANGER'
-    UNKNOWN = 'UNKNOWN'
+    CLIENT_SHUTDOWN = "CLIENT_SHUTDOWN"
+    ACQUIRE_TIMEOUT = "ACQUIRE_TIMEOUT"
+    LOCK_NOT_OWNED = "LOCK_NOT_OWNED"
+    LOCK_STOLEN = "LOCK_STOLEN"
+    LOCK_IN_DANGER = "LOCK_IN_DANGER"
+    UNKNOWN = "UNKNOWN"
 
-    def __init__(self, code='UNKNOWN', message='Unknown error'):
+    def __init__(self, code="UNKNOWN", message="Unknown error"):
         Exception.__init__(self)
         self.code = code
         self.message = message
@@ -20,4 +20,4 @@ class DynamoDBLockError(Exception):
         """
         Returns a readable string representation of this instance.
         """
-        return f'{self.__class__.__name__}: {self.code} - {self.message}'
+        return f"{self.__class__.__name__}: {self.code} - {self.message}"

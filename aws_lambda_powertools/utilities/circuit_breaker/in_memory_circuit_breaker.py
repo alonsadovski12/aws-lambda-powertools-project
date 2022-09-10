@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
-from math import floor, ceil
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.circuit_breaker.base.base_circuit_breaker import BaseCircuitBreaker, State
@@ -9,50 +8,52 @@ from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_monitor imp
 logger = Logger(__name__)
 
 
-
 class InMemoryCircuitBreaker(BaseCircuitBreaker):
     """
-        Provides implementation of CircuitBreaker design pattern, and stores the circuit breaker in local memory
+    Provides implementation of CircuitBreaker design pattern, and stores the circuit breaker in local memory
 
-        Parameters:
-            name: str
-                CircuitBreaker name
-            failure_threshold: int
-                How many failures needs to occur before opening the CircuitBreaker. defaults: 5
-            recovery_timeout: int
-                How much time must be pass after opening the circuit breaker until sending the next request. default: 30
-            expected_exception: List[Exception]
-                Which exceptions are okay to get when running the business logic, those exception will be caught and treat
-                as the business logic finished successfully. defaults: None
-            fallback_function: Callable
-                Called when the circuit is opened. defaults: None
-            monitor: CircuitBreakerMonitor
-                Circuit Breaker monitor class. defaults = CircuitBreakerMonitor(),
-            logger: Logger
-                The logger which will write logs from this object. Defaults: aws_lambda_powertools.logging.logger
-        Example
-        -----------
-        def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:  #pylint: disable=unused-argument
-            remote_call()
+    Parameters:
+        name: str
+            CircuitBreaker name
+        failure_threshold: int
+            How many failures needs to occur before opening the CircuitBreaker. defaults: 5
+        recovery_timeout: int
+            How much time must be pass after opening the circuit breaker until sending the next request. default: 30
+        expected_exception: List[Exception]
+            Which exceptions are okay to get when running the business logic, those exception will be caught and treat
+            as the business logic finished successfully. defaults: None
+        fallback_function: Callable
+            Called when the circuit is opened. defaults: None
+        monitor: CircuitBreakerMonitor
+            Circuit Breaker monitor class. defaults = CircuitBreakerMonitor(),
+        logger: Logger
+            The logger which will write logs from this object. Defaults: aws_lambda_powertools.logging.logger
+    Example
+    -----------
+    def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:  #pylint: disable=unused-argument
+        remote_call()
 
-        @InMemoryCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME)
-        def remote_call():
-            http = urllib3.PoolManager()
+    @InMemoryCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME)
+    def remote_call():
+        http = urllib3.PoolManager()
 
-            url = os.environ.get('URL') + '/api/hello'
-            resp = http.request('GET', url)
-            print(f'responded with status: {resp.status}')
-            if resp.status != 200:
-                raise ValueError('connection error')
-        """
-    def __init__(self,
-                 name: str,
-                 failure_threshold: int = None,
-                 recovery_timeout: int = None,
-                 expected_exception: List[Exception] = None,
-                 fallback_function: Callable= None,
-                 monitor: CircuitBreakerMonitor = CircuitBreakerMonitor(),
-                 logger: Logger = logger):
+        url = os.environ.get('URL') + '/api/hello'
+        resp = http.request('GET', url)
+        print(f'responded with status: {resp.status}')
+        if resp.status != 200:
+            raise ValueError('connection error')
+    """
+
+    def __init__(
+        self,
+        name: str,
+        failure_threshold: Optional[int] = None,
+        recovery_timeout: Optional[int] = None,
+        expected_exception: List[Exception] = [],
+        fallback_function: Optional[Callable] = None,
+        monitor: CircuitBreakerMonitor = CircuitBreakerMonitor(),
+        logger: Logger = logger,
+    ):
         super().__init__(name, failure_threshold, recovery_timeout, expected_exception, fallback_function, monitor)
         self.logger = logger
 
@@ -73,7 +74,8 @@ class InMemoryCircuitBreaker(BaseCircuitBreaker):
         """
         self.logger.info(
             f"Approximate time when the circuit breaker will return to half open: "
-            f"{datetime.utcnow() + timedelta(seconds=self.open_remaining)}")
+            f"{datetime.utcnow() + timedelta(seconds=self.open_remaining)}"
+        )
 
         return datetime.utcnow() + timedelta(seconds=self.open_remaining)
 
@@ -132,17 +134,19 @@ class InMemoryCircuitBreaker(BaseCircuitBreaker):
         self.logger.info("The requested call failed")
         self._failure_count += 1
         if self._threshold_occurred():
-            self.logger.warning(f'Failure count is above the threshold {self._failure_threshold}. moving state to open')
+            self.logger.warning(f"Failure count is above the threshold {self._failure_threshold}. moving state to open")
             self._state = State.OPEN
             self._opened = self.current_milli_time()
 
-    
-def circuit(name,
-            failure_threshold=None,
-            recovery_timeout=None,
-            expected_exception=None,
-            fallback_function=None,
-            cls=InMemoryCircuitBreaker):
+
+def circuit(
+    name,
+    failure_threshold=None,
+    recovery_timeout=None,
+    expected_exception=None,
+    fallback_function=None,
+    cls=InMemoryCircuitBreaker,
+):
     # if the decorator is used without parameters, the
     # wrapped function is provided as first argument
     if callable(failure_threshold):
@@ -153,4 +157,5 @@ def circuit(name,
             recovery_timeout=recovery_timeout,
             expected_exception=expected_exception,
             name=name,
-            fallback_function=fallback_function)
+            fallback_function=fallback_function,
+        )

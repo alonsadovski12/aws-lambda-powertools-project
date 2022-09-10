@@ -1,16 +1,17 @@
 from time import sleep
-
 from unittest.mock import Mock, patch
+
 from pytest import raises
 
 from aws_lambda_powertools.utilities.circuit_breaker.base.base_circuit_breaker import CircuitBreakerException, State
-from aws_lambda_powertools.utilities.circuit_breaker.in_memory_circuit_breaker import InMemoryCircuitBreaker
 from aws_lambda_powertools.utilities.circuit_breaker.circuit_breaker_monitor import CircuitBreakerMonitor
+from aws_lambda_powertools.utilities.circuit_breaker.in_memory_circuit_breaker import InMemoryCircuitBreaker
 
-TABLE_NAME = 'AlonsadovskiHelloDemocircuit-ServiceCircuitBreaker01F9D601-1K8M53UDO7S6D'
+TABLE_NAME = "AlonsadovskiHelloDemocircuit-ServiceCircuitBreaker01F9D601-1K8M53UDO7S6D"
 NUM = 0
 THRESH3 = 0
 RAISE_EXCEPTION = False
+
 
 def pseudo_remote_call():
     global NUM
@@ -18,7 +19,7 @@ def pseudo_remote_call():
     return True
 
 
-@InMemoryCircuitBreaker(name='circuit_success')
+@InMemoryCircuitBreaker(name="circuit_success")
 def circuit_success():
     return pseudo_remote_call()
 
@@ -38,14 +39,14 @@ def circuit_generator_failure():
 @InMemoryCircuitBreaker(failure_threshold=1, name="threshold_1")
 def circuit_threshold_1():
     pseudo_remote_call()
-    raise IOError('Connection refused')
+    raise IOError("Connection refused")
 
 
 @InMemoryCircuitBreaker(failure_threshold=2, recovery_timeout=3, name="threshold_2")
 def circuit_threshold_2_timeout_1():
     global RAISE_EXCEPTION
     if RAISE_EXCEPTION:
-        raise IOError('Connection refused')
+        raise IOError("Connection refused")
     return True
 
 
@@ -55,7 +56,7 @@ def circuit_threshold_3_timeout_1():
     THRESH3 = THRESH3 + 1
     if THRESH3 == 1:
         return True
-    raise IOError('Connection refused')
+    raise IOError("Connection refused")
 
 
 def test_circuit_pass_through():
@@ -77,11 +78,11 @@ def test_circuitbreaker_monitor():
     assert len(list(CircuitBreakerMonitor.get_open())) == 1
 
 
-@patch('tests.unit.test_circuit_breaker.test_functional.pseudo_remote_call', return_value=True)
+@patch("tests.unit.test_circuit_breaker.test_functional.pseudo_remote_call", return_value=True)
 def test_threshold_hit_prevents_consequent_calls(mock_remote):
     # type: (Mock) -> None
-    mock_remote.side_effect = IOError('Connection refused')
-    circuitbreaker = CircuitBreakerMonitor.get('threshold_1')
+    mock_remote.side_effect = IOError("Connection refused")
+    circuitbreaker = CircuitBreakerMonitor.get("threshold_1")
 
     assert circuitbreaker.closed
 
@@ -96,10 +97,10 @@ def test_threshold_hit_prevents_consequent_calls(mock_remote):
     mock_remote.assert_called_once_with()
 
 
-@patch('tests.unit.test_circuit_breaker.test_functional.pseudo_remote_call', return_value=True)
+@patch("tests.unit.test_circuit_breaker.test_functional.pseudo_remote_call", return_value=True)
 def test_circuitbreaker_recover_half_open(mock_remote):
     # type: (Mock) -> None
-    circuitbreaker = CircuitBreakerMonitor.get('threshold_3')
+    circuitbreaker = CircuitBreakerMonitor.get("threshold_3")
 
     # initial state: closed
     assert circuitbreaker.closed
@@ -165,14 +166,14 @@ def test_circuitbreaker_recover_half_open(mock_remote):
         circuit_threshold_3_timeout_1()
 
 
-@patch('tests.unit.test_circuit_breaker.test_functional.pseudo_remote_call', return_value=True)
+@patch("tests.unit.test_circuit_breaker.test_functional.pseudo_remote_call", return_value=True)
 def test_circuitbreaker_reopens_after_successful_calls(mock_remote):
     global RAISE_EXCEPTION
     RAISE_EXCEPTION = False
     # type: (Mock) -> None
-    circuitbreaker = CircuitBreakerMonitor.get('threshold_2')
+    circuitbreaker = CircuitBreakerMonitor.get("threshold_2")
 
-    assert str(circuitbreaker) == 'threshold_2'
+    assert str(circuitbreaker) == "threshold_2"
 
     # initial state: closed
     assert circuitbreaker.closed
@@ -235,7 +236,6 @@ def test_circuitbreaker_reopens_after_successful_calls(mock_remote):
     assert circuitbreaker.closed
     assert circuitbreaker.state == State.CLOSED
     assert circuitbreaker.failure_count == 0
-
 
 
 @patch("tests.unit.test_circuit_breaker.test_functional.pseudo_remote_call", return_value=True)
