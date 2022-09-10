@@ -118,7 +118,7 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
         >>> logger = Logger(service="payment")
         >>>
         >>> def handler(event, context):
-                logger.info("Hello")
+                logger.info("Hello", extra_key="world")
 
     **Setups structured logging in JSON for Lambda functions using env vars**
 
@@ -128,7 +128,7 @@ class Logger(logging.Logger):  # lgtm [py/missing-call-to-init]
         >>> logger = Logger()
         >>>
         >>> def handler(event, context):
-                logger.info("Hello")
+                logger.info("Hello", extra_key="world")
 
     **Append payment_id to previously setup logger**
 
