@@ -12,7 +12,7 @@ logger = Logger(__name__)
 
 class InMemoryCircuitBreaker(BaseCircuitBreaker):
     """
-        Provides distributed locks using DynamoDB's support for conditional reads/writes.
+        Provides implementation of CircuitBreaker design pattern, and stores the circuit breaker in local memory
 
         Parameters:
             name: str
