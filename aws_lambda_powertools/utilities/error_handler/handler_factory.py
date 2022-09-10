@@ -9,7 +9,6 @@ from aws_lambda_powertools.utilities.error_handler.sqs_destination import SqsDes
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
 
-
 class Singleton(type):
     """Singleton enforcer. Can be extracted if additional classes need to be singletons."""
 

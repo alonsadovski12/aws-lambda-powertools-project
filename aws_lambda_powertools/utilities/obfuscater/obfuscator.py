@@ -23,20 +23,24 @@ class Obfuscator:
     obfuscater = Obfuscator(FilterModes.BlackList)
     obfuscated_object = obfuscater.obfuscate(INPUT_DICT, ['name', 'email'])
     print(obfuscated_object)
-    {'id': 111, 'name': '***********', 'email': '*********************', 'location': {'country': 'israel', 'city': 'Tel Aviv'}}
+    {'id': 111, 'name': '***********', 'email': '*********************',
+     'location': {'country': 'israel', 'city': 'Tel Aviv'}}
 
     Example 2:
     obfuscater = Obfuscator(FilterModes.BlackList, md5)
     obfuscated_object = obfuscater.obfuscate(INPUT_DICT, ['name', 'email'])
     print(obfuscated_object)
-    {'id': 111, 'name': '3b2d3431cdc2dc59422eaba64c88393c', 'email': 'adbdfce40472f27324522a8e1bf40b24', 'location': {'country': 'israel', 'city': 'Tel Aviv'}}
+    {'id': 111, 'name': '3b2d3431cdc2dc59422eaba64c88393c', 'email': 'adbdfce40472f27324522a8e1bf40b24',
+     'location': {'country': 'israel', 'city': 'Tel Aviv'}}
 
 
     """
 
-    def __init__(self, filtering_mode: Optional[FilterModes] = None, obfuscation_method: Optional[Callable] = None) -> None:
-        self.filtering_mode = filtering_mode if filtering_mode else FilterModes.BlackList
-        self.obfuscation_method: Callable = obfuscation_method if obfuscation_method else Obfuscator.mask  # type: ignore[assignment]
+    def __init__(
+        self, filtering_mode: Optional[FilterModes] = None, obfuscation_method: Optional[Callable] = None
+    ) -> None:
+        self.filtering_mode = filtering_mode or FilterModes.BlackList
+        self.obfuscation_method: Callable = obfuscation_method or Obfuscator.mask
 
     @staticmethod
     def mask(input_string: str) -> str:
@@ -49,7 +53,7 @@ class Obfuscator:
         return unflatten(dictionary)
 
     def _get_keys_to_obfuscate(self, flattened_obj: Dict, keys_to_filter: List) -> List:
-        matched_keys = list()
+        matched_keys = []
         flattened_keys = list(flattened_obj.keys())
         for filter_key in keys_to_filter:
             for object_key in flattened_keys:

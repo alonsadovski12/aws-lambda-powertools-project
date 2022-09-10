@@ -5,7 +5,6 @@ import time
 from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from functools import partial
-from types import CodeType
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from ..shared import constants

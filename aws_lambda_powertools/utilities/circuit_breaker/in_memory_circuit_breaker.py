@@ -49,9 +49,9 @@ class InMemoryCircuitBreaker(BaseCircuitBreaker):
         name: str,
         failure_threshold: Optional[int] = None,
         recovery_timeout: Optional[int] = None,
-        expected_exception: List[Exception] = [],
+        expected_exception: Optional[List[Exception]] = None,
         fallback_function: Optional[Callable] = None,
-        monitor: CircuitBreakerMonitor = CircuitBreakerMonitor(),
+        monitor: Optional[CircuitBreakerMonitor] = None,
         logger: Logger = logger,
     ):
         super().__init__(name, failure_threshold, recovery_timeout, expected_exception, fallback_function, monitor)
@@ -96,12 +96,12 @@ class InMemoryCircuitBreaker(BaseCircuitBreaker):
 
     @property
     def closed(self):
-        self.logger.info(f"Changing state to closed")
+        self.logger.info("Changing state to closed")
         return self.state == State.CLOSED
 
     @property
     def opened(self):
-        self.logger.info(f"Changing state to open")
+        self.logger.info("Changing state to open")
         return self.state == State.OPEN
 
     @property

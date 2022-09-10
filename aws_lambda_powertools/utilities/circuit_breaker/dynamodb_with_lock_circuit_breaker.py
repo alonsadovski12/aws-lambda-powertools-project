@@ -1,5 +1,4 @@
 import json
-from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Callable, List, Optional
 
@@ -65,8 +64,8 @@ class DynamoDBLockCircuitBreaker(BaseCircuitBreaker):
         remote_call()
 
 
-    @DynamoDBLockCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME, table_name=os.environ.get('TABLE_NAME'),
-                                lock_client=LOCK_CLIENT)
+    @DynamoDBLockCircuitBreaker(failure_threshold=2, recovery_timeout=30, name=CB_NAME,
+        table_name=os.environ.get('TABLE_NAME'), lock_client=LOCK_CLIENT)
     def remote_call():
         http = urllib3.PoolManager()
         url = os.environ.get('URL') + '/api/hello'
@@ -86,9 +85,9 @@ class DynamoDBLockCircuitBreaker(BaseCircuitBreaker):
         boto3_session: Optional[boto3.session.Session] = None,
         failure_threshold: Optional[int] = None,
         recovery_timeout: Optional[int] = None,
-        expected_exception: List[Exception] = [],
+        expected_exception: Optional[List[Exception]] = None,
         fallback_function: Optional[Callable] = None,
-        monitor: CircuitBreakerMonitor = CircuitBreakerMonitor(),
+        monitor: Optional[CircuitBreakerMonitor] = None,
         logger: Logger = logger,
     ):
         super().__init__(name, failure_threshold, recovery_timeout, expected_exception, fallback_function, monitor)

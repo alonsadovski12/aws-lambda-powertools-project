@@ -1,7 +1,5 @@
 from typing import Dict
 
-from aws_lambda_powertools.utilities.circuit_breaker.base.base_circuit_breaker import BaseCircuitBreaker
-
 
 class CircuitBreakerMonitor:
     circuit_breakers: Dict = {}

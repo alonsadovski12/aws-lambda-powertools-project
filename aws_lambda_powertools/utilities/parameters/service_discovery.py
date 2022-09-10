@@ -4,17 +4,13 @@ AWS Service Discovery configuration retrieval and caching utility
 
 
 import json
-import os
 from typing import Any, Dict, Optional, Union
 from uuid import uuid4
 
 import boto3
 from botocore.config import Config
 
-from ...shared import constants
-from ...shared.functions import resolve_env_var_choice
 from .base import DEFAULT_MAX_AGE_SECS, DEFAULT_PROVIDERS, BaseProvider
-from .exceptions import GetParameterError
 
 CLIENT_ID = str(uuid4())
 

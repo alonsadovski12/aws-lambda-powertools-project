@@ -1,7 +1,7 @@
 # pylint: disable=no-name-in-module,unused-argument
 from abc import ABCMeta, abstractmethod
-from typing import Any, Dict
 from logging import Logger
+from typing import Any, Dict
 
 from aws_lambda_powertools.utilities.typing import LambdaContext
 

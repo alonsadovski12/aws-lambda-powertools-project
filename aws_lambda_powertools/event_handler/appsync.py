@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 AppSyncResolverEventT = TypeVar("AppSyncResolverEventT", bound=AppSyncResolverEvent)
 
 
-class BaseRouter(ABC):
+class BaseRouter(ABC):  # noqa: B024
     current_event: AppSyncResolverEventT  # type: ignore[valid-type]
     lambda_context: LambdaContext
 

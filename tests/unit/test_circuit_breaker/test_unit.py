@@ -7,8 +7,8 @@ from aws_lambda_powertools.utilities.circuit_breaker.in_memory_circuit_breaker i
 
 
 class FooError(Exception):
-    def __init__(self, val=None):
-        self.val = val
+    def __init__(self, value=None):
+        self.val = value
 
 
 class BarError(Exception):
@@ -94,7 +94,6 @@ def test_circuitbreaker_call_fallback_function_with_parameters(patch):
     cb = circuit(name="with_fallback", fallback_function=fallback)
 
     # mock opened prop to see if fallback is called with correct parameters.
-    # cb.opened = lambda self: True
     func_decorated = cb.decorate(mocked_function)
 
     func_decorated("test2", test="test")
@@ -156,7 +155,6 @@ def test_retry():
     cb = circuit(name="with_fallback", fallback_function=fallback)
 
     # mock opened prop to see if fallback is called with correct parameters.
-    # cb.opened = lambda self: True
     func_decorated = cb.retry_until_done(retry_method)
 
     func_decorated(test="test")
@@ -183,7 +181,6 @@ def test_retry_3_times():
     cb = circuit(name="with_fallback", fallback_function=fallback)
 
     # mock opened prop to see if fallback is called with correct parameters.
-    # cb.opened = lambda self: True
     func_decorated = cb.retry_until_done(retry_method)
 
     func_decorated()

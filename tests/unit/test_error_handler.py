@@ -1,4 +1,3 @@
-# pylint: disable=abstract-class-instantiated,protected-access,import-logging,no-value-for-parameter,unused-argument,invalid-name
 import json
 import logging
 import os
@@ -125,7 +124,7 @@ def handler_sqs_type(event: Dict[str, Any], context: LambdaContext) -> Dict[str,
 
 def test_sqs_handler_missing_env_var(mocker):
     with pytest.raises(
-        ErrorHandlerException, match=f"missing environment variable for SQS DLQ destination error handler.*"
+        ErrorHandlerException, match="missing environment variable for SQS DLQ destination error handler.*"
     ):
         handler_sqs_type(event={}, context=generate_context())
 
